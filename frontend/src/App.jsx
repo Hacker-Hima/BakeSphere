@@ -80,6 +80,7 @@ const AppContent = () => {
         bakery_owner: "dashboard",
         manager: "dashboard",
         head_baker: "production",
+        chef: "production",
         cashier: "pos",
         customer: "shop"
       };

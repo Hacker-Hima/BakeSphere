@@ -6,7 +6,7 @@ import { authenticateToken } from "../middleware/auth.js";
 
 const router = express.Router();
 
-// 1. Standard Credentials Login
+// 1. Standard Automated Credentials Login (Role is auto-fetched, no selection required)
 router.post("/login", (req, res) => {
   const { email, password } = req.body;
 
@@ -27,19 +27,40 @@ router.post("/login", (req, res) => {
     return res.status(401).json({ error: "Invalid credentials: Incorrect password" });
   }
 
+  // Check if account has verified their email
+  if (user.isVerified === false) {
+    return res.status(403).json({
+      error: "Your email address is not yet verified. Please enter the verification OTP sent to your email.",
+      requiresVerification: true,
+      email: user.email,
+      verificationCode: user.verificationCode // for simulation helper
+    });
+  }
+
   const token = generateToken(user);
 
-  // Return safe user object (omit password)
-  const { password: _, ...safeUser } = user;
+  // Return safe user object (omit password & verificationCode)
+  const { password: _, verificationCode: __, ...safeUser } = user;
 
   res.json({
-    message: "Login successful",
+    message: `Welcome back, ${user.name}! Authenticated as ${user.roleLabel || user.role}.`,
     token,
     user: safeUser
   });
 });
 
-// 1b. User Registration (New Account)
+// Role metadata mappings
+const roleMeta = {
+  super_admin: { label: "Super Admin", perms: ["all_access", "manage_users", "financial_audit", "system_settings", "api_keys"] },
+  bakery_owner: { label: "Main Manager / Owner", perms: ["view_finances", "branch_analytics", "pricing_control", "supplier_contracts", "manage_users"] },
+  manager: { label: "Branch Manager", perms: ["approve_production", "staff_shifts", "purchase_orders", "inventory_reorder", "pos_access"] },
+  head_baker: { label: "Head Chef / Master Baker", perms: ["recipe_scaler", "batch_production", "fefo_consumption", "quality_inspection", "wastage_logging"] },
+  chef: { label: "Pastry Chef", perms: ["recipe_scaler", "batch_production", "fefo_consumption", "quality_inspection"] },
+  cashier: { label: "POS Cashier", perms: ["pos_billing", "thermal_invoice", "accept_payments", "daily_register_close"] },
+  customer: { label: "Customer", perms: ["place_orders", "custom_cake_studio", "redeem_loyalty", "order_tracking"] }
+};
+
+// 1b. User Registration with Role Selection & Email Verification OTP
 router.post("/register", (req, res) => {
   const { name, email, password, role = "customer", branchId = "BR-01", branchName = "Heritage Main (T. Nagar)" } = req.body;
 
@@ -53,20 +74,23 @@ router.post("/register", (req, res) => {
 
   const existing = verifiedUsers.find((u) => u.email.toLowerCase() === email.toLowerCase());
   if (existing) {
+    if (existing.isVerified === false) {
+      // Re-trigger OTP verification for existing unverified user
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      existing.verificationCode = otp;
+      return res.status(200).json({
+        message: "An unverified account exists with this email. Verification OTP has been resent.",
+        requiresVerification: true,
+        email: existing.email,
+        verificationCode: otp
+      });
+    }
     return res.status(409).json({ error: "An account with this email already exists. Please sign in." });
   }
 
-  const roleMeta = {
-    super_admin: { label: "Super Admin", perms: ["all_access", "manage_users", "financial_audit", "system_settings", "api_keys"] },
-    bakery_owner: { label: "Bakery Owner", perms: ["view_finances", "branch_analytics", "pricing_control", "supplier_contracts"] },
-    manager: { label: "Branch Manager", perms: ["approve_production", "staff_shifts", "purchase_orders", "inventory_reorder", "pos_access"] },
-    head_baker: { label: "Head Baker / Production", perms: ["recipe_scaler", "batch_production", "fefo_consumption", "quality_inspection", "wastage_logging"] },
-    cashier: { label: "POS Cashier", perms: ["pos_billing", "thermal_invoice", "accept_payments", "daily_register_close"] },
-    customer: { label: "Premium Customer", perms: ["place_orders", "custom_cake_studio", "redeem_loyalty", "order_tracking"] }
-  };
-
   const selectedRole = roleMeta[role] ? role : "customer";
   const hashedPassword = bcrypt.hashSync(password, 10);
+  const verificationOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
   const newUser = {
     id: verifiedUsers.length + 1,
@@ -81,18 +105,90 @@ router.post("/register", (req, res) => {
     avatar: req.body.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(name)}`,
     loyaltyPoints: 100,
     tier: "Silver Baker",
+    isVerified: false,
+    verificationCode: verificationOtp,
     permissions: roleMeta[selectedRole].perms
   };
 
   verifiedUsers.push(newUser);
 
-  const token = generateToken(newUser);
-  const { password: _, ...safeUser } = newUser;
+  console.log(`[BakeSphere Auth] Verification OTP for ${newUser.email} is: ${verificationOtp}`);
 
   res.status(201).json({
-    message: "Registration successful",
+    message: "Registration initiated! Please enter the 6-digit verification code sent to your email.",
+    requiresVerification: true,
+    email: newUser.email,
+    verificationCode: verificationOtp
+  });
+});
+
+// 1c. Email Verification
+router.post("/verify-email", (req, res) => {
+  const { email, otp } = req.body;
+
+  if (!email || !otp) {
+    return res.status(400).json({ error: "Email and 6-digit OTP code are required" });
+  }
+
+  const user = verifiedUsers.find(
+    (u) => u.email.toLowerCase() === email.toLowerCase()
+  );
+
+  if (!user) {
+    return res.status(404).json({ error: "Account not found for verification." });
+  }
+
+  if (user.isVerified) {
+    const token = generateToken(user);
+    const { password: _, verificationCode: __, ...safeUser } = user;
+    return res.json({
+      message: "Email is already verified! Logged in automatically.",
+      token,
+      user: safeUser
+    });
+  }
+
+  // Allow test OTP '123456' as master debug fallback or the exact generated code
+  if (user.verificationCode !== otp.trim() && otp.trim() !== "123456") {
+    return res.status(400).json({ error: "Invalid verification code. Please check your email or resend OTP." });
+  }
+
+  user.isVerified = true;
+  delete user.verificationCode;
+
+  const token = generateToken(user);
+  const { password: _, ...safeUser } = user;
+
+  res.json({
+    message: `Email verified successfully! Welcome to BakeSphere, ${user.name}.`,
     token,
     user: safeUser
+  });
+});
+
+// 1d. Resend Verification OTP
+router.post("/resend-otp", (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ error: "Email is required" });
+  }
+
+  const user = verifiedUsers.find(
+    (u) => u.email.toLowerCase() === email.toLowerCase()
+  );
+
+  if (!user) {
+    return res.status(404).json({ error: "Account not found" });
+  }
+
+  const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
+  user.verificationCode = newOtp;
+  console.log(`[BakeSphere Auth] Resent Verification OTP for ${user.email}: ${newOtp}`);
+
+  res.json({
+    message: "A new 6-digit verification code has been dispatched to your email.",
+    email: user.email,
+    verificationCode: newOtp
   });
 });
 

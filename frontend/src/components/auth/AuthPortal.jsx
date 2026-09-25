@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { handleImageError, getSafeImageUrl } from "../../utils/imageFallback.js";
 
@@ -8,8 +8,9 @@ export const AuthPortal = ({ onNavigateTab }) => {
     role,
     login,
     register,
+    verifyEmail,
+    resendOtp,
     googleLogin,
-    switchDemoRole,
     loginAsGuest,
     logout,
     loading,
@@ -18,8 +19,7 @@ export const AuthPortal = ({ onNavigateTab }) => {
     allowedTabs
   } = useAuth();
 
-  const [authMode, setAuthMode] = useState("login"); // "login" | "register" | "roles"
-  const [selectedRole, setSelectedRole] = useState("super_admin");
+  const [authMode, setAuthMode] = useState("login"); // "login" | "register" | "verify"
   const [email, setEmail] = useState("admin@bakesphere.com");
   const [password, setPassword] = useState("Bakery@2026");
   const [showPassword, setShowPassword] = useState(false);
@@ -32,124 +32,139 @@ export const AuthPortal = ({ onNavigateTab }) => {
   const [regRole, setRegRole] = useState("customer");
   const [regBranch, setRegBranch] = useState("Heritage Main (T. Nagar)");
 
-  const roles = [
-    {
-      role: "super_admin",
-      label: "Super Admin",
-      icon: "👑",
-      email: "admin@bakesphere.com",
-      password: "Bakery@2026",
-      branch: "Heritage Main",
-      badge: "Full System",
-      primaryTab: "dashboard"
-    },
-    {
-      role: "bakery_owner",
-      label: "Bakery Owner",
-      icon: "💼",
-      email: "owner@bakesphere.com",
-      password: "Bakery@2026",
-      branch: "Heritage Main",
-      badge: "Executive",
-      primaryTab: "dashboard"
-    },
-    {
-      role: "manager",
-      label: "Manager",
-      icon: "📋",
-      email: "manager@bakesphere.com",
-      password: "Bakery@2026",
-      branch: "Anna Nagar",
-      badge: "Operations",
-      primaryTab: "dashboard"
-    },
-    {
-      role: "head_baker",
-      label: "Head Baker",
-      icon: "🧑‍🍳",
-      email: "baker@bakesphere.com",
-      password: "Bakery@2026",
-      branch: "Heritage Main",
-      badge: "Kitchen",
-      primaryTab: "production"
-    },
-    {
-      role: "cashier",
-      label: "Cashier",
-      icon: "🛒",
-      email: "cashier@bakesphere.com",
-      password: "Bakery@2026",
-      branch: "Koyambedu",
-      badge: "POS Retail",
-      primaryTab: "pos"
-    },
-    {
-      role: "customer",
-      label: "Customer",
-      icon: "🛍️",
-      email: "customer@bakesphere.com",
-      password: "Bakery@2026",
-      branch: "Online",
-      badge: "Storefront",
-      primaryTab: "shop"
-    }
-  ];
+  // Email Verification state
+  const [verificationEmail, setVerificationEmail] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [simulatedOtp, setSimulatedOtp] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
 
-  const handleSelectRole = (r) => {
-    setSelectedRole(r.role);
-    setEmail(r.email);
-    setPassword(r.password);
-    if (setAuthError) setAuthError("");
-  };
-
-  const handle1ClickRoleLogin = async (r) => {
-    handleSelectRole(r);
-    setSuccessMsg(`Signing in as ${r.label}...`);
-    const res = await switchDemoRole(r.role);
-    if (res.success) {
-      setSuccessMsg(`Welcome back, ${r.label}!`);
-      setTimeout(() => {
-        if (onNavigateTab) onNavigateTab(r.primaryTab);
-      }, 350);
+  // Helper to determine destination workspace from role
+  const getDestinationTab = (userRole) => {
+    switch (userRole) {
+      case "head_baker":
+      case "chef":
+        return "production";
+      case "cashier":
+        return "pos";
+      case "manager":
+      case "bakery_owner":
+      case "super_admin":
+        return "dashboard";
+      case "customer":
+      default:
+        return "shop";
     }
   };
 
+  // Resend cooldown timer
+  useEffect(() => {
+    let timer;
+    if (resendCooldown > 0) {
+      timer = setInterval(() => setResendCooldown((prev) => prev - 1), 1000);
+    }
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
+
+  // Automated Login Handler: System auto-resolves role based on credentials alone
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
-    if (!email || !password) return;
-    const res = await login(email, password);
-    if (res.success) {
-      setSuccessMsg(`Welcome, ${res.user.name}`);
-      const matched = roles.find((c) => c.role === res.user.role);
-      const targetTab = matched ? matched.primaryTab : "shop";
+    if (!email.trim() || !password.trim()) return;
+
+    if (setAuthError) setAuthError("");
+    setSuccessMsg("");
+
+    const res = await login(email.trim(), password);
+
+    if (res.requiresVerification) {
+      setVerificationEmail(res.email || email);
+      if (res.verificationCode) setSimulatedOtp(res.verificationCode);
+      setAuthMode("verify");
+      if (setAuthError) setAuthError("Please complete email verification before signing in.");
+      return;
+    }
+
+    if (res.success && res.user) {
+      setSuccessMsg(`Welcome, ${res.user.name}!`);
+      const targetTab = getDestinationTab(res.user.role);
       setTimeout(() => {
         if (onNavigateTab) onNavigateTab(targetTab);
-      }, 500);
+      }, 400);
     }
   };
 
+  // Registration Handler
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
     if (!regName.trim() || !regEmail.trim() || !regPassword.trim()) {
-      if (setAuthError) setAuthError("Please fill in all registration fields.");
+      if (setAuthError) setAuthError("Please fill in all fields.");
       return;
     }
+
+    if (regPassword.length < 6) {
+      if (setAuthError) setAuthError("Password must be at least 6 characters.");
+      return;
+    }
+
+    if (setAuthError) setAuthError("");
+    setSuccessMsg("");
+
     const res = await register({
-      name: regName,
-      email: regEmail,
+      name: regName.trim(),
+      email: regEmail.trim(),
       password: regPassword,
       role: regRole,
       branchName: regBranch,
       branchId: regBranch.includes("Anna Nagar") ? "BR-02" : regBranch.includes("Koyambedu") ? "BR-03" : "BR-01"
     });
-    if (res.success) {
-      setSuccessMsg(`Welcome, ${regName}!`);
+
+    if (res.requiresVerification) {
+      setVerificationEmail(res.email || regEmail.trim());
+      if (res.verificationCode) setSimulatedOtp(res.verificationCode);
+      setOtpCode("");
+      setResendCooldown(30);
+      setAuthMode("verify");
+      setSuccessMsg("Verification code sent to your email!");
+    } else if (res.success && res.user) {
+      setSuccessMsg(`Welcome, ${res.user.name}!`);
+      const targetTab = getDestinationTab(res.user.role);
       setTimeout(() => {
-        if (onNavigateTab) onNavigateTab(regRole === "customer" ? "shop" : "dashboard");
-      }, 500);
+        if (onNavigateTab) onNavigateTab(targetTab);
+      }, 400);
     }
   };
 
+  // Email Verification Handler
+  const handleVerifySubmit = async (e) => {
+    e.preventDefault();
+    if (!otpCode.trim()) {
+      if (setAuthError) setAuthError("Please enter the verification code.");
+      return;
+    }
+
+    if (setAuthError) setAuthError("");
+    const res = await verifyEmail(verificationEmail, otpCode.trim());
+
+    if (res.success && res.user) {
+      setSuccessMsg(`Email verified! Welcome, ${res.user.name}.`);
+      const targetTab = getDestinationTab(res.user.role);
+      setTimeout(() => {
+        if (onNavigateTab) onNavigateTab(targetTab);
+      }, 400);
+    }
+  };
+
+  // Resend OTP
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0) return;
+    const res = await resendOtp(verificationEmail);
+    if (res.success) {
+      if (res.verificationCode) setSimulatedOtp(res.verificationCode);
+      setResendCooldown(45);
+      setSuccessMsg("A new verification code has been dispatched!");
+    }
+  };
+
+  // Google OAuth Handshake
   const handleGoogleAuth = async () => {
     const res = await googleLogin({
       email: "evaluator.mentor@gmail.com",
@@ -160,15 +175,13 @@ export const AuthPortal = ({ onNavigateTab }) => {
       setSuccessMsg("Google Authentication successful!");
       setTimeout(() => {
         if (onNavigateTab) onNavigateTab("shop");
-      }, 500);
+      }, 400);
     }
   };
 
-  const currentRoleObj = roles.find((r) => r.role === selectedRole) || roles[0];
-
   return (
     <div className="bk-auth-v2-container">
-      {/* ══════════ ACTIVE SESSION BANNER (WHEN LOGGED IN) ══════════ */}
+      {/* ══════════ ACTIVE SESSION BANNER ══════════ */}
       {currentUser && (
         <div className="bk-auth-v2-session-bar">
           <div className="bk-auth-v2-session-left">
@@ -208,82 +221,54 @@ export const AuthPortal = ({ onNavigateTab }) => {
         </div>
       )}
 
-      {/* ══════════ MAIN LUXURY SPLIT AUTH CARD ══════════ */}
-      <div className="bk-auth-v2-card">
-        {/* LEFT SHOWCASE HERO */}
-        <div className="bk-auth-v2-hero">
-          <div className="bk-auth-v2-hero-content">
-            <div className="bk-auth-v2-brand-badge">
+      {/* ══════════ SLEEK MINIMAL AUTH CARD ══════════ */}
+      <div className="bk-auth-v2-card" style={{ maxWidth: "860px", margin: "1.5rem auto" }}>
+        {/* LEFT CLEAN HERO */}
+        <div className="bk-auth-v2-hero" style={{ padding: "2.5rem 2rem", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+          <div>
+            <div className="bk-auth-v2-brand-badge" style={{ marginBottom: "1.2rem" }}>
               <span className="bk-auth-v2-logo-icon">🧁</span>
               <span className="bk-auth-v2-logo-text">BakeSphere</span>
             </div>
 
-            <h1 className="bk-auth-v2-hero-title">
+            <h1 className="bk-auth-v2-hero-title" style={{ fontSize: "2rem", marginBottom: "0.8rem", lineHeight: 1.2 }}>
               Artisan Bakery &<br />Kitchen ERP
             </h1>
 
-            <p className="bk-auth-v2-hero-sub">
-              Streamlined management for multi-branch baking, POS checkout, and online storefront delivery.
+            <p className="bk-auth-v2-hero-sub" style={{ fontSize: "0.95rem", opacity: 0.9 }}>
+              Multi-branch bakery management, storefront delivery, POS billing, and AI culinary assistant.
             </p>
-
-            <div className="bk-auth-v2-perks">
-              <div className="bk-auth-v2-perk-item">
-                <span className="bk-auth-v2-perk-icon">⚡</span>
-                <span><strong>1-Click Testing</strong> with pre-built staff roles</span>
-              </div>
-              <div className="bk-auth-v2-perk-item">
-                <span className="bk-auth-v2-perk-icon">🛡️</span>
-                <span><strong>Strict RBAC</strong> tailored to each bakery role</span>
-              </div>
-              <div className="bk-auth-v2-perk-item">
-                <span className="bk-auth-v2-perk-icon">🎂</span>
-                <span><strong>72 Unique Items</strong> ready for storefront & orders</span>
-              </div>
-            </div>
-
-            <div className="bk-auth-v2-hero-actions">
-              <button
-                type="button"
-                className="bk-auth-v2-guest-btn"
-                onClick={() => {
-                  loginAsGuest();
-                  if (onNavigateTab) onNavigateTab("shop");
-                }}
-              >
-                <span>🛍️ Explore Store as Guest</span>
-                <span className="bk-auth-v2-arrow">→</span>
-              </button>
-            </div>
           </div>
 
-          <div className="bk-auth-v2-hero-footer">
-            <span>📍 Heritage Main · Anna Nagar · Koyambedu</span>
+          <div style={{ marginTop: "2rem" }}>
+            <button
+              type="button"
+              className="bk-auth-v2-guest-btn"
+              onClick={() => {
+                loginAsGuest();
+                if (onNavigateTab) onNavigateTab("shop");
+              }}
+            >
+              <span>🛍️ Explore Store as Guest</span>
+              <span className="bk-auth-v2-arrow">→</span>
+            </button>
           </div>
         </div>
 
-        {/* RIGHT INTERACTIVE AUTH FORM */}
-        <div className="bk-auth-v2-form-section">
-          {/* Top Segmented Mode Switcher */}
-          <div className="bk-auth-v2-switcher">
+        {/* RIGHT MINIMAL AUTH FORM */}
+        <div className="bk-auth-v2-form-section" style={{ padding: "2.5rem 2.2rem" }}>
+          {/* Minimal Mode Switcher */}
+          <div className="bk-auth-v2-switcher" style={{ marginBottom: "1.5rem" }}>
             <button
               type="button"
               className={`bk-auth-v2-switch-btn ${authMode === "login" ? "active" : ""}`}
               onClick={() => {
                 setAuthMode("login");
                 if (setAuthError) setAuthError("");
+                setSuccessMsg("");
               }}
             >
               Sign In
-            </button>
-            <button
-              type="button"
-              className={`bk-auth-v2-switch-btn ${authMode === "roles" ? "active" : ""}`}
-              onClick={() => {
-                setAuthMode("roles");
-                if (setAuthError) setAuthError("");
-              }}
-            >
-              ⚡ Instant Roles
             </button>
             <button
               type="button"
@@ -291,70 +276,39 @@ export const AuthPortal = ({ onNavigateTab }) => {
               onClick={() => {
                 setAuthMode("register");
                 if (setAuthError) setAuthError("");
+                setSuccessMsg("");
               }}
             >
               Register
             </button>
+            {verificationEmail && (
+              <button
+                type="button"
+                className={`bk-auth-v2-switch-btn ${authMode === "verify" ? "active" : ""}`}
+                onClick={() => {
+                  setAuthMode("verify");
+                  if (setAuthError) setAuthError("");
+                }}
+              >
+                Verify Email
+              </button>
+            )}
           </div>
 
           {/* Feedback Alerts */}
           {authError && (
-            <div className="bk-auth-v2-alert error">
+            <div className="bk-auth-v2-alert error" style={{ marginBottom: "1rem" }}>
               <span>⚠️ {authError}</span>
             </div>
           )}
           {successMsg && (
-            <div className="bk-auth-v2-alert success">
+            <div className="bk-auth-v2-alert success" style={{ marginBottom: "1rem" }}>
               <span>✓ {successMsg}</span>
             </div>
           )}
 
-          {/* QUICK ROLE SELECTOR DOCK (VISIBLE ON LOGIN OR ROLES MODE) */}
-          {authMode !== "register" && (
-            <div className="bk-auth-v2-roles-dock">
-              <div className="bk-auth-v2-dock-header">
-                <span className="bk-auth-v2-dock-label">Select Demo Profile:</span>
-                <span className="bk-auth-v2-dock-tip">Click any role to autofill or 1-click launch</span>
-              </div>
-              <div className="bk-auth-v2-dock-pills">
-                {roles.map((r) => {
-                  const isSelected = selectedRole === r.role;
-                  return (
-                    <button
-                      key={r.role}
-                      type="button"
-                      className={`bk-auth-v2-role-pill ${isSelected ? "selected" : ""}`}
-                      onClick={() => handleSelectRole(r)}
-                      title={`${r.label} (${r.badge})`}
-                    >
-                      <span className="bk-auth-v2-pill-icon">{r.icon}</span>
-                      <span className="bk-auth-v2-pill-name">{r.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Quick 1-Click Launch Button for the selected role */}
-              <div className="bk-auth-v2-role-preview-card">
-                <div className="bk-auth-v2-role-preview-info">
-                  <span className="bk-auth-v2-preview-badge">{currentRoleObj.badge}</span>
-                  <strong>{currentRoleObj.label}</strong>
-                  <span className="bk-auth-v2-preview-email">{currentRoleObj.email}</span>
-                </div>
-                <button
-                  type="button"
-                  className="bk-auth-v2-quick-login-btn"
-                  onClick={() => handle1ClickRoleLogin(currentRoleObj)}
-                  disabled={loading}
-                >
-                  ⚡ Launch as {currentRoleObj.label}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* MODE 1 & 2: SIGN IN FORM */}
-          {(authMode === "login" || authMode === "roles") && (
+          {/* ══════════ MODE 1: MINIMAL CREDENTIAL LOGIN ══════════ */}
+          {authMode === "login" && (
             <form onSubmit={handleLoginSubmit} className="bk-auth-v2-form">
               <div className="bk-auth-v2-input-group">
                 <label className="bk-auth-v2-label">Email or Staff ID</label>
@@ -365,7 +319,7 @@ export const AuthPortal = ({ onNavigateTab }) => {
                     className="bk-auth-v2-input"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter email"
+                    placeholder="name@bakesphere.com"
                     required
                   />
                 </div>
@@ -389,7 +343,7 @@ export const AuthPortal = ({ onNavigateTab }) => {
                     className="bk-auth-v2-input"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter password"
+                    placeholder="Enter your password"
                     required
                   />
                 </div>
@@ -399,11 +353,12 @@ export const AuthPortal = ({ onNavigateTab }) => {
                 type="submit"
                 className="bk-auth-v2-submit-btn"
                 disabled={loading}
+                style={{ marginTop: "0.5rem" }}
               >
-                {loading ? "Signing In..." : "Sign In to BakeSphere →"}
+                {loading ? "Signing In..." : "Sign In →"}
               </button>
 
-              <div className="bk-auth-v2-divider">
+              <div className="bk-auth-v2-divider" style={{ margin: "1.2rem 0" }}>
                 <span>or</span>
               </div>
 
@@ -421,10 +376,21 @@ export const AuthPortal = ({ onNavigateTab }) => {
                 </svg>
                 <span>Continue with Google</span>
               </button>
+
+              <div style={{ textAlign: "center", marginTop: "1.2rem", fontSize: "0.85rem", color: "#6b7280" }}>
+                Don't have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => setAuthMode("register")}
+                  style={{ background: "none", border: "none", color: "#c8102e", fontWeight: 600, cursor: "pointer" }}
+                >
+                  Create one
+                </button>
+              </div>
             </form>
           )}
 
-          {/* MODE 3: REGISTRATION FORM */}
+          {/* ══════════ MODE 2: REGISTRATION ══════════ */}
           {authMode === "register" && (
             <form onSubmit={handleRegisterSubmit} className="bk-auth-v2-form">
               <div className="bk-auth-v2-input-group">
@@ -436,7 +402,7 @@ export const AuthPortal = ({ onNavigateTab }) => {
                     className="bk-auth-v2-input"
                     value={regName}
                     onChange={(e) => setRegName(e.target.value)}
-                    placeholder="e.g. Anita Nair"
+                    placeholder="Enter your name"
                     required
                   />
                 </div>
@@ -480,11 +446,12 @@ export const AuthPortal = ({ onNavigateTab }) => {
                     value={regRole}
                     onChange={(e) => setRegRole(e.target.value)}
                   >
-                    <option value="customer">Customer (Store)</option>
-                    <option value="cashier">Cashier (POS)</option>
-                    <option value="head_baker">Head Baker (Kitchen)</option>
-                    <option value="manager">Manager (Branch)</option>
-                    <option value="bakery_owner">Bakery Owner</option>
+                    <option value="customer">Customer</option>
+                    <option value="chef">Pastry Chef</option>
+                    <option value="head_baker">Head Chef</option>
+                    <option value="manager">Branch Manager</option>
+                    <option value="bakery_owner">Main Manager / Owner</option>
+                    <option value="cashier">POS Cashier</option>
                     <option value="super_admin">Super Admin</option>
                   </select>
                 </div>
@@ -507,9 +474,129 @@ export const AuthPortal = ({ onNavigateTab }) => {
                 type="submit"
                 className="bk-auth-v2-submit-btn"
                 disabled={loading}
+                style={{ marginTop: "0.5rem" }}
               >
-                {loading ? "Creating..." : "Create Account →"}
+                {loading ? "Registering..." : "Create Account & Verify Email →"}
               </button>
+
+              <div style={{ textAlign: "center", marginTop: "1rem", fontSize: "0.85rem", color: "#6b7280" }}>
+                Already have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => setAuthMode("login")}
+                  style={{ background: "none", border: "none", color: "#c8102e", fontWeight: 600, cursor: "pointer" }}
+                >
+                  Sign In
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* ══════════ MODE 3: EMAIL VERIFICATION ══════════ */}
+          {authMode === "verify" && (
+            <form onSubmit={handleVerifySubmit} className="bk-auth-v2-form">
+              <div style={{ textAlign: "center", padding: "0.5rem 0 1rem" }}>
+                <div style={{ fontSize: "2rem", marginBottom: "0.3rem" }}>📬</div>
+                <h3 style={{ fontSize: "1.15rem", fontWeight: 700, color: "#111827", margin: "0 0 0.2rem" }}>
+                  Verify Email Address
+                </h3>
+                <p style={{ fontSize: "0.82rem", color: "#6b7280", margin: 0 }}>
+                  Enter the 6-digit OTP code sent to: <br />
+                  <strong style={{ color: "#c8102e" }}>{verificationEmail}</strong>
+                </p>
+              </div>
+
+              {simulatedOtp && (
+                <div
+                  style={{
+                    background: "#fef3c7",
+                    border: "1px solid #fde68a",
+                    borderRadius: "8px",
+                    padding: "0.6rem 0.8rem",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginBottom: "0.8rem"
+                  }}
+                >
+                  <div>
+                    <span style={{ fontSize: "0.7rem", color: "#92400e", display: "block", fontWeight: 600 }}>
+                      Code Preview:
+                    </span>
+                    <strong style={{ fontSize: "1rem", letterSpacing: "2px", color: "#78350f" }}>
+                      {simulatedOtp}
+                    </strong>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setOtpCode(simulatedOtp)}
+                    style={{
+                      background: "#b45309",
+                      color: "#ffffff",
+                      border: "none",
+                      borderRadius: "6px",
+                      padding: "0.3rem 0.65rem",
+                      fontSize: "0.72rem",
+                      fontWeight: 600,
+                      cursor: "pointer"
+                    }}
+                  >
+                    Auto-fill
+                  </button>
+                </div>
+              )}
+
+              <div className="bk-auth-v2-input-group">
+                <label className="bk-auth-v2-label">Verification Code</label>
+                <div className="bk-auth-v2-input-wrapper">
+                  <span className="bk-auth-v2-input-icon">🔑</span>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    className="bk-auth-v2-input"
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
+                    placeholder="123456"
+                    style={{ fontSize: "1.2rem", letterSpacing: "4px", fontWeight: 700, textAlign: "center" }}
+                    required
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="bk-auth-v2-submit-btn"
+                disabled={loading || otpCode.length < 6}
+                style={{ marginTop: "0.5rem" }}
+              >
+                {loading ? "Verifying..." : "Verify & Sign In →"}
+              </button>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1rem" }}>
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  disabled={resendCooldown > 0 || loading}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: resendCooldown > 0 ? "#9ca3af" : "#c8102e",
+                    fontSize: "0.8rem",
+                    cursor: resendCooldown > 0 ? "not-allowed" : "pointer",
+                    fontWeight: 600
+                  }}
+                >
+                  {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "🔄 Resend Code"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setAuthMode("login")}
+                  style={{ background: "none", border: "none", color: "#4b5563", fontSize: "0.8rem", cursor: "pointer" }}
+                >
+                  ← Sign In
+                </button>
+              </div>
             </form>
           )}
         </div>

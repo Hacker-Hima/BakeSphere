@@ -10,6 +10,7 @@ export const ROLE_PERMISSIONS = {
   bakery_owner: ["shop", "dashboard", "pos", "production", "inventory", "ai-forecast", "branches", "login"],
   manager: ["shop", "dashboard", "pos", "production", "inventory", "branches", "login"],
   head_baker: ["shop", "production", "inventory", "custom-cake", "login"],
+  chef: ["shop", "production", "inventory", "custom-cake", "login"],
   cashier: ["pos", "shop", "custom-cake", "login"],
   customer: ["shop", "custom-cake", "login"]
 };
@@ -59,7 +60,7 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token, currentUser]);
 
-  // Standard Credentials Login
+  // Automated Credentials Login (Role is auto-detected)
   const login = async (email, password) => {
     setLoading(true);
     setAuthError("");
@@ -70,12 +71,24 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify({ email, password })
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Login failed");
+      if (!res.ok) {
+        if (data.requiresVerification) {
+          setLoading(false);
+          return {
+            success: false,
+            requiresVerification: true,
+            email: data.email,
+            verificationCode: data.verificationCode,
+            error: data.error
+          };
+        }
+        throw new Error(data.error || "Login failed");
+      }
 
       setToken(data.token);
       setCurrentUser(data.user);
       setLoading(false);
-      return { success: true, user: data.user };
+      return { success: true, user: data.user, message: data.message };
     } catch (err) {
       setAuthError(err.message);
       setLoading(false);
@@ -83,7 +96,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Register New Account
+  // Register New Account with Role Choice
   const register = async (userData) => {
     setLoading(true);
     setAuthError("");
@@ -96,12 +109,59 @@ export const AuthProvider = ({ children }) => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Registration failed");
 
+      setLoading(false);
+      return {
+        success: true,
+        requiresVerification: data.requiresVerification,
+        email: data.email,
+        verificationCode: data.verificationCode,
+        message: data.message
+      };
+    } catch (err) {
+      setAuthError(err.message);
+      setLoading(false);
+      return { success: false, error: err.message };
+    }
+  };
+
+  // Verify Email with OTP
+  const verifyEmail = async (email, otp) => {
+    setLoading(true);
+    setAuthError("");
+    try {
+      const res = await fetch(`${API_BASE}/auth/verify-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Email verification failed");
+
       setToken(data.token);
       setCurrentUser(data.user);
       setLoading(false);
-      return { success: true, user: data.user };
+      return { success: true, user: data.user, message: data.message };
     } catch (err) {
       setAuthError(err.message);
+      setLoading(false);
+      return { success: false, error: err.message };
+    }
+  };
+
+  // Resend OTP
+  const resendOtp = async (email) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/auth/resend-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+      setLoading(false);
+      if (!res.ok) throw new Error(data.error || "Failed to resend code");
+      return { success: true, verificationCode: data.verificationCode, message: data.message };
+    } catch (err) {
       setLoading(false);
       return { success: false, error: err.message };
     }
@@ -219,6 +279,8 @@ export const AuthProvider = ({ children }) => {
         isCustomer,
         login,
         register,
+        verifyEmail,
+        resendOtp,
         googleLogin,
         switchDemoRole,
         loginAsGuest,
