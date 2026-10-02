@@ -43,11 +43,29 @@ router.post("/login", async (req, res) => {
 
   // Check if account has verified their email
   if (user.isVerified === false) {
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+    user.verificationCode = otp;
+    user.otpExpires = otpExpires;
+    if (mongoose.connection.readyState === 1) {
+      try {
+        await User.updateOne({ email: user.email.toLowerCase() }, { $set: { verificationCode: otp, otpExpires } });
+      } catch {
+        // ignore
+      }
+    }
+    await sendOtpEmail({
+      to: user.email,
+      name: user.name,
+      otp,
+      roleLabel: user.roleLabel || "Customer"
+    });
     return res.status(403).json({
-      error: "Your email address is not yet verified. Please enter the verification OTP sent to your email.",
+      error: `Your account is not yet verified. A fresh OTP has been sent to ${user.email}.`,
       requiresVerification: true,
       email: user.email,
-      verificationCode: user.verificationCode // for simulation helper
+      verificationCode: otp,
+      otpExpires: otpExpires.toISOString()
     });
   }
 
@@ -102,19 +120,35 @@ router.post("/register", async (req, res) => {
     if (existing.isVerified === false) {
       // Re-trigger OTP verification for existing unverified user
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
       existing.verificationCode = otp;
+      existing.otpExpires = otpExpires;
       if (mongoose.connection.readyState === 1) {
         try {
-          await User.updateOne({ email: email.toLowerCase() }, { $set: { verificationCode: otp } });
+          await User.updateOne({ email: email.toLowerCase() }, { $set: { verificationCode: otp, otpExpires } });
         } catch {
           // ignore
         }
       }
+
+      console.log(`[BakeSphere Auth] Re-dispatching verification OTP for unverified account ${existing.email}: ${otp}`);
+      const emailDelivery = await sendOtpEmail({
+        to: existing.email,
+        name: existing.name,
+        otp,
+        roleLabel: existing.roleLabel || "Customer"
+      });
+
       return res.status(200).json({
-        message: "An unverified account exists with this email. Verification OTP has been resent.",
+        message: emailDelivery.success
+          ? `Verification OTP sent to ${existing.email}! Please check your email inbox.`
+          : "An unverified account exists with this email. Verification OTP has been generated.",
         requiresVerification: true,
         email: existing.email,
-        verificationCode: otp
+        verificationCode: otp,
+        otpExpires: otpExpires.toISOString(),
+        emailSent: emailDelivery.success,
+        previewUrl: emailDelivery.previewUrl
       });
     }
     return res.status(409).json({ error: "An account with this email already exists. Please sign in." });

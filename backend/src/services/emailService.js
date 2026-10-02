@@ -1,6 +1,8 @@
 import nodemailer from "nodemailer";
+import dotenv from "dotenv";
 
 let cachedTransporter = null;
+let lastSmtpConfigKey = null;
 
 /**
  * Get or create the Nodemailer transporter.
@@ -9,23 +11,35 @@ let cachedTransporter = null;
  * 2. Ethereal Email test account (Auto-provisioned live sandbox for local testing)
  */
 async function getTransporter() {
-  if (cachedTransporter) return cachedTransporter;
+  // Always reload .env so edits to .env are picked up immediately without restarting
+  try {
+    dotenv.config();
+  } catch (_e) {
+    // ignore
+  }
 
-  const smtpUser = process.env.SMTP_USER;
-  const smtpPass = process.env.SMTP_PASS;
+  const smtpUser = (process.env.SMTP_USER || "").trim();
+  const smtpPass = (process.env.SMTP_PASS || "").trim();
+  const host = (process.env.SMTP_HOST || "smtp.gmail.com").trim();
+  const port = Number(process.env.SMTP_PORT) || 587;
+  const currentKey = `${host}:${port}:${smtpUser}:${smtpPass}`;
+
+  if (cachedTransporter && lastSmtpConfigKey === currentKey) {
+    return cachedTransporter;
+  }
 
   if (smtpUser && smtpPass) {
-    const host = process.env.SMTP_HOST || "smtp.gmail.com";
-    const port = Number(process.env.SMTP_PORT) || 587;
     const isSecure = port === 465;
     const isGmail = host.toLowerCase().includes("gmail");
+    const cleanPass = smtpPass.replace(/\s+/g, ""); // Strip any spaces from Google App Password
+
     cachedTransporter = nodemailer.createTransport(
       isGmail
         ? {
             service: "gmail",
             auth: {
               user: smtpUser,
-              pass: smtpPass.replace(/\s+/g, "") // Strip any spaces from Google App Password
+              pass: cleanPass
             }
           }
         : {
@@ -34,7 +48,7 @@ async function getTransporter() {
             secure: isSecure,
             auth: {
               user: smtpUser,
-              pass: smtpPass
+              pass: cleanPass
             },
             tls: {
               rejectUnauthorized: false
@@ -42,6 +56,7 @@ async function getTransporter() {
           }
     );
 
+    lastSmtpConfigKey = currentKey;
     console.log(`📧 [EmailService] Initialized SMTP Transporter (${isGmail ? "Gmail Service" : `${host}:${port}`}) for ${smtpUser}`);
     return cachedTransporter;
   }
@@ -58,6 +73,7 @@ async function getTransporter() {
         pass: testAccount.pass
       }
     });
+    lastSmtpConfigKey = `ethereal:${testAccount.user}`;
     console.log(`📧 [EmailService] Using Ethereal Test Account: ${testAccount.user}`);
     return cachedTransporter;
   } catch (err) {
