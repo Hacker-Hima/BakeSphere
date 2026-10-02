@@ -20,6 +20,8 @@ export const AuthModal = ({ isOpen, onClose }) => {
   const [verifyEmailAddr, setVerifyEmailAddr] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [simulatedOtp, setSimulatedOtp] = useState("");
+  const [emailSentReal, setEmailSentReal] = useState(false);
+  const [emailPreviewUrl, setEmailPreviewUrl] = useState("");
   const [resendCooldown, setResendCooldown] = useState(0);
 
   useEffect(() => {
@@ -65,6 +67,8 @@ export const AuthModal = ({ isOpen, onClose }) => {
     if (res.requiresVerification) {
       setVerifyEmailAddr(res.email || regEmail);
       if (res.verificationCode) setSimulatedOtp(res.verificationCode);
+      if (res.previewUrl) setEmailPreviewUrl(res.previewUrl);
+      setEmailSentReal(Boolean(res.emailSent));
       setOtpCode("");
       setResendCooldown(30);
       setAuthMode("verify");
@@ -87,6 +91,8 @@ export const AuthModal = ({ isOpen, onClose }) => {
     const res = await resendOtp(verifyEmailAddr);
     if (res.success) {
       if (res.verificationCode) setSimulatedOtp(res.verificationCode);
+      if (res.previewUrl) setEmailPreviewUrl(res.previewUrl);
+      setEmailSentReal(Boolean(res.emailSent));
       setResendCooldown(45);
     }
   };
@@ -113,12 +119,21 @@ export const AuthModal = ({ isOpen, onClose }) => {
       >
         {/* Header */}
         <div className="bk-auth-modal-header">
-          <div className="bk-auth-modal-title-group">
-            <span className="bk-auth-modal-badge">✨ Auto-Role Identity Engine</span>
-            <h3 className="bk-auth-modal-title">Sign In to BakeSphere</h3>
-            <p className="bk-auth-modal-subtitle">
-              Credentials automatically detect your role: Customer, Chef, Head Chef, Manager, or Admin.
-            </p>
+          <div className="bk-auth-modal-brand-flex">
+            <div className="bk-auth-modal-logo-frame">
+              <img
+                src="/logo.png"
+                alt="BakeSphere"
+                className="bk-auth-modal-logo-img"
+              />
+            </div>
+            <div className="bk-auth-modal-title-group">
+              <span className="bk-auth-modal-badge">✨ Auto-Role Identity Engine</span>
+              <h3 className="bk-auth-modal-title">Sign In to BakeSphere</h3>
+              <p className="bk-auth-modal-subtitle">
+                Credentials automatically detect your role: Customer, Chef, Head Chef, Manager, or Admin.
+              </p>
+            </div>
           </div>
           <button className="bk-modal-close-btn" onClick={onClose}>✕</button>
         </div>
@@ -299,68 +314,38 @@ export const AuthModal = ({ isOpen, onClose }) => {
 
         {/* Mode 3: Email OTP Verification */}
         {authMode === "verify" && (
-          <form onSubmit={handleVerifySubmit} className="bk-modal-form-body">
-            <div style={{ textAlign: "center", marginBottom: "0.8rem" }}>
-              <div style={{ fontSize: "2rem" }}>📬</div>
-              <h4 style={{ margin: "0.2rem 0", color: "#1e293b", fontSize: "1.1rem" }}>
-                Verify Your Email Address
+          <form onSubmit={handleVerifySubmit} className="bk-modal-form-body" style={{ padding: "0.5rem 0" }}>
+            <div style={{ textAlign: "center", marginBottom: "1.2rem" }}>
+              <div style={{ fontSize: "2.4rem", marginBottom: "0.3rem" }}>✉️</div>
+              <h4 style={{ margin: "0 0 0.3rem", color: "#111827", fontSize: "1.15rem", fontWeight: 700 }}>
+                Verify Your Email
               </h4>
-              <p style={{ margin: 0, fontSize: "0.8rem", color: "#64748b" }}>
-                Enter the 6-digit OTP code sent to: <br />
+              <p style={{ margin: 0, fontSize: "0.84rem", color: "#6b7280", lineHeight: 1.5 }}>
+                Enter the 6-digit code sent to:<br />
                 <strong style={{ color: "var(--crimson-500)" }}>{verifyEmailAddr}</strong>
               </p>
             </div>
 
-            {simulatedOtp && (
-              <div
-                style={{
-                  background: "#fef3c7",
-                  border: "1px solid #fde68a",
-                  borderRadius: "8px",
-                  padding: "0.6rem 0.8rem",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  marginBottom: "0.8rem"
-                }}
-              >
-                <div>
-                  <span style={{ fontSize: "0.7rem", color: "#92400e", display: "block", fontWeight: 600 }}>
-                    📬 Simulated Inbox OTP:
-                  </span>
-                  <strong style={{ fontSize: "1rem", letterSpacing: "2px", color: "#78350f" }}>
-                    {simulatedOtp}
-                  </strong>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setOtpCode(simulatedOtp)}
-                  style={{
-                    background: "#b45309",
-                    color: "#ffffff",
-                    border: "none",
-                    borderRadius: "4px",
-                    padding: "0.3rem 0.6rem",
-                    fontSize: "0.72rem",
-                    fontWeight: 600,
-                    cursor: "pointer"
-                  }}
-                >
-                  Auto-fill
-                </button>
-              </div>
-            )}
-
-            <div className="bk-modal-form-group">
-              <label className="bk-modal-form-label">6-Digit Code:</label>
+            <div className="bk-modal-form-group" style={{ marginBottom: "1.2rem" }}>
+              <label className="bk-modal-form-label" style={{ textAlign: "center", display: "block" }}>
+                6-Digit Verification Code
+              </label>
               <input
                 type="text"
                 maxLength={6}
                 value={otpCode}
                 onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
                 className="bk-modal-form-input"
-                placeholder="123456"
-                style={{ textAlign: "center", fontSize: "1.2rem", letterSpacing: "4px", fontWeight: 700 }}
+                placeholder="••••••"
+                autoFocus
+                style={{
+                  textAlign: "center",
+                  fontSize: "1.8rem",
+                  letterSpacing: "10px",
+                  fontWeight: 800,
+                  padding: "0.65rem",
+                  color: "#c8102e"
+                }}
                 required
               />
             </div>
@@ -369,11 +354,12 @@ export const AuthModal = ({ isOpen, onClose }) => {
               type="submit"
               disabled={loading || otpCode.length < 6}
               className="bk-btn-modal-submit"
+              style={{ width: "100%", padding: "0.75rem", fontSize: "0.95rem" }}
             >
-              {loading ? "Verifying..." : "Verify & Sign In →"}
+              {loading ? "Verifying..." : "Verify & Continue →"}
             </button>
 
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: "0.6rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1rem" }}>
               <button
                 type="button"
                 onClick={handleResend}
@@ -381,18 +367,18 @@ export const AuthModal = ({ isOpen, onClose }) => {
                 style={{
                   background: "none",
                   border: "none",
-                  color: resendCooldown > 0 ? "#94a3b8" : "var(--crimson-500)",
-                  fontSize: "0.75rem",
+                  color: resendCooldown > 0 ? "#9ca3af" : "var(--crimson-500)",
+                  fontSize: "0.8rem",
                   cursor: resendCooldown > 0 ? "not-allowed" : "pointer",
                   fontWeight: 600
                 }}
               >
-                {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "🔄 Resend Code"}
+                {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Didn't receive code? Resend"}
               </button>
               <button
                 type="button"
                 onClick={() => setAuthMode("jwt")}
-                style={{ background: "none", border: "none", color: "#64748b", fontSize: "0.75rem", cursor: "pointer" }}
+                style={{ background: "none", border: "none", color: "#6b7280", fontSize: "0.8rem", cursor: "pointer", fontWeight: 500 }}
               >
                 ← Back to Sign In
               </button>

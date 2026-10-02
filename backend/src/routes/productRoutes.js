@@ -1,13 +1,30 @@
 import express from "express";
+import mongoose from "mongoose";
 import { bakeryProducts } from "../data/products.js";
 import { authenticateToken, requireRoles } from "../middleware/auth.js";
+import Product from "../models/Product.js";
 
 const router = express.Router();
 
 // Get all products with optional filters: category, search query, barcode, inStock
-router.get("/", (req, res) => {
+router.get("/", async (req, res) => {
   const { category, search, barcode, minPrice, maxPrice } = req.query;
-  let results = [...bakeryProducts];
+
+  let results = [];
+  if (mongoose.connection.readyState === 1) {
+    try {
+      const dbItems = await Product.find({}).lean();
+      if (dbItems && dbItems.length > 0) {
+        results = dbItems;
+      } else {
+        results = [...bakeryProducts];
+      }
+    } catch {
+      results = [...bakeryProducts];
+    }
+  } else {
+    results = [...bakeryProducts];
+  }
 
   if (category && category.toLowerCase() !== "all") {
     results = results.filter(
@@ -24,8 +41,8 @@ router.get("/", (req, res) => {
     results = results.filter(
       (p) =>
         p.name.toLowerCase().includes(q) ||
-        p.description.toLowerCase().includes(q) ||
-        p.sku.toLowerCase().includes(q) ||
+        (p.description && p.description.toLowerCase().includes(q)) ||
+        (p.sku && p.sku.toLowerCase().includes(q)) ||
         (p.tags && p.tags.some((t) => t.toLowerCase().includes(q)))
     );
   }
@@ -44,9 +61,20 @@ router.get("/", (req, res) => {
 });
 
 // Barcode scanner quick lookup (for high-speed POS scanning)
-router.get("/scan/:barcode", (req, res) => {
+router.get("/scan/:barcode", async (req, res) => {
   const { barcode } = req.params;
-  const product = bakeryProducts.find((p) => p.barcode === barcode);
+
+  let product = null;
+  if (mongoose.connection.readyState === 1) {
+    try {
+      product = await Product.findOne({ barcode }).lean();
+    } catch {
+      // fallback
+    }
+  }
+  if (!product) {
+    product = bakeryProducts.find((p) => p.barcode === barcode);
+  }
 
   if (!product) {
     return res.status(404).json({
@@ -59,9 +87,20 @@ router.get("/scan/:barcode", (req, res) => {
 });
 
 // Get single product by ID
-router.get("/:id", (req, res) => {
+router.get("/:id", async (req, res) => {
   const id = parseInt(req.params.id, 10);
-  const product = bakeryProducts.find((p) => p.id === id);
+
+  let product = null;
+  if (mongoose.connection.readyState === 1) {
+    try {
+      product = await Product.findOne({ id }).lean();
+    } catch {
+      // fallback
+    }
+  }
+  if (!product) {
+    product = bakeryProducts.find((p) => p.id === id);
+  }
 
   if (!product) {
     return res.status(404).json({ error: "Product not found" });
@@ -71,7 +110,7 @@ router.get("/:id", (req, res) => {
 });
 
 // Create new product (Protected: Super Admin, Owner, Manager)
-router.post("/", authenticateToken, requireRoles(["super_admin", "bakery_owner", "manager"]), (req, res) => {
+router.post("/", authenticateToken, requireRoles(["super_admin", "bakery_owner", "manager"]), async (req, res) => {
   const { name, category, sellingPrice, costPrice, weight, description, barcode, shelfLifeDays } = req.body;
 
   if (!name || !category || !sellingPrice) {
@@ -101,6 +140,14 @@ router.post("/", authenticateToken, requireRoles(["super_admin", "bakery_owner",
   };
 
   bakeryProducts.push(newProduct);
+
+  if (mongoose.connection.readyState === 1) {
+    try {
+      await Product.create(newProduct);
+    } catch (dbErr) {
+      console.error("🍃 [MongoDB Atlas] Error saving product:", dbErr.message);
+    }
+  }
 
   res.status(201).json({
     message: "Product created successfully",

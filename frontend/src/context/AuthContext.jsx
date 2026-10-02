@@ -6,13 +6,13 @@ const API_BASE = "http://localhost:5000/api";
 
 // Role-Based Module Access Mapping
 export const ROLE_PERMISSIONS = {
-  super_admin: ["shop", "dashboard", "pos", "custom-cake", "production", "inventory", "ai-forecast", "api-docs", "branches", "login"],
-  bakery_owner: ["shop", "dashboard", "pos", "production", "inventory", "ai-forecast", "branches", "login"],
-  manager: ["shop", "dashboard", "pos", "production", "inventory", "branches", "login"],
-  head_baker: ["shop", "production", "inventory", "custom-cake", "login"],
-  chef: ["shop", "production", "inventory", "custom-cake", "login"],
-  cashier: ["pos", "shop", "custom-cake", "login"],
-  customer: ["shop", "custom-cake", "login"]
+  super_admin: ["shop", "dashboard", "pos", "billing", "custom-cake", "production", "inventory", "ai-forecast", "branches", "login"],
+  bakery_owner: ["shop", "dashboard", "pos", "billing", "production", "inventory", "ai-forecast", "branches", "login"],
+  manager: ["shop", "dashboard", "pos", "billing", "production", "inventory", "branches", "login"],
+  head_baker: ["shop", "billing", "production", "inventory", "custom-cake", "login"],
+  chef: ["shop", "billing", "production", "inventory", "custom-cake", "login"],
+  cashier: ["pos", "billing", "shop", "custom-cake", "login"],
+  customer: ["shop", "billing", "custom-cake", "login"]
 };
 
 export const AuthProvider = ({ children }) => {
@@ -115,6 +115,11 @@ export const AuthProvider = ({ children }) => {
         requiresVerification: data.requiresVerification,
         email: data.email,
         verificationCode: data.verificationCode,
+        otpExpires: data.otpExpires,
+        role: data.role,
+        roleLabel: data.roleLabel,
+        emailSent: data.emailSent,
+        previewUrl: data.previewUrl,
         message: data.message
       };
     } catch (err) {
@@ -160,7 +165,15 @@ export const AuthProvider = ({ children }) => {
       const data = await res.json();
       setLoading(false);
       if (!res.ok) throw new Error(data.error || "Failed to resend code");
-      return { success: true, verificationCode: data.verificationCode, message: data.message };
+      return {
+        success: true,
+        email: data.email,
+        verificationCode: data.verificationCode,
+        otpExpires: data.otpExpires,
+        emailSent: data.emailSent,
+        previewUrl: data.previewUrl,
+        message: data.message
+      };
     } catch (err) {
       setLoading(false);
       return { success: false, error: err.message };

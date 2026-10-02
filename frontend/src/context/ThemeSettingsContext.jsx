@@ -37,6 +37,7 @@ export const ThemeSettingsProvider = ({ children }) => {
   });
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settingsActiveTab, setSettingsActiveTab] = useState("appearance");
 
   // Save settings to localStorage
   useEffect(() => {
@@ -149,7 +150,10 @@ export const ThemeSettingsProvider = ({ children }) => {
     playChime("success");
   };
 
-  const openSettings = () => {
+  const openSettings = (targetTab = "appearance") => {
+    if (typeof targetTab === "string") {
+      setSettingsActiveTab(targetTab);
+    }
     setIsSettingsOpen(true);
     playChime("click");
   };
@@ -184,6 +188,8 @@ export const ThemeSettingsProvider = ({ children }) => {
         updateSetting,
         resetDefaults,
         isSettingsOpen,
+        settingsActiveTab,
+        setSettingsActiveTab,
         openSettings,
         closeSettings,
         playChime,

@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useThemeSettings } from "../../context/ThemeSettingsContext.jsx";
 import { useLanguage } from "../../context/LanguageContext.jsx";
+import { useAuth } from "../../context/AuthContext.jsx";
+import { handleImageError, getSafeImageUrl } from "../../utils/imageFallback.js";
 
 export const SettingsDrawer = () => {
   const {
@@ -9,11 +11,25 @@ export const SettingsDrawer = () => {
     resetDefaults,
     isSettingsOpen,
     closeSettings,
-    playChime
+    playChime,
+    settingsActiveTab
   } = useThemeSettings();
 
   const { language, setLanguage, t } = useLanguage();
-  const [activeTab, setActiveTab] = useState("appearance"); // "appearance" | "typography" | "localization" | "sensory"
+  const { currentUser, logout, switchDemoRole } = useAuth();
+  const [activeTab, setActiveTab] = useState("appearance"); // "appearance" | "typography" | "localization" | "sensory" | "account"
+
+  useEffect(() => {
+    if (settingsActiveTab) {
+      setActiveTab(settingsActiveTab);
+    }
+  }, [settingsActiveTab, isSettingsOpen]);
+
+  const handleLogout = () => {
+    playChime("click");
+    closeSettings();
+    logout();
+  };
 
   if (!isSettingsOpen) return null;
 
@@ -201,12 +217,94 @@ export const SettingsDrawer = () => {
           </button>
         </div>
 
+        {/* Current Authenticated User Bar with Direct Quick Logout */}
+        {currentUser && (
+          <div
+            style={{
+              padding: "0.85rem 1.4rem",
+              background: "linear-gradient(90deg, rgba(225, 29, 72, 0.14) 0%, rgba(20, 20, 28, 0.75) 100%)",
+              borderBottom: "1px solid var(--border-subtle)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "0.8rem"
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", minWidth: 0 }}>
+              <img
+                src={getSafeImageUrl(currentUser.avatar)}
+                alt={currentUser.name}
+                onError={handleImageError}
+                style={{
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "50%",
+                  objectFit: "cover",
+                  border: "2px solid var(--crimson-500)",
+                  flexShrink: 0
+                }}
+              />
+              <div style={{ minWidth: 0 }}>
+                <div style={{
+                  fontWeight: 700,
+                  fontSize: "0.88rem",
+                  color: "var(--text-primary)",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis"
+                }}>
+                  {currentUser.name}
+                </div>
+                <div style={{
+                  fontSize: "0.72rem",
+                  color: "var(--text-muted)",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis"
+                }}>
+                  <span style={{ color: "var(--gold-400)", fontWeight: 600 }}>
+                    {currentUser.roleLabel || currentUser.role}
+                  </span>
+                  {" • "}
+                  <span>{currentUser.email}</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              id="bk-settings-quick-logout-btn"
+              onClick={handleLogout}
+              style={{
+                background: "linear-gradient(135deg, rgba(225, 29, 72, 0.25), rgba(136, 19, 55, 0.45))",
+                border: "1px solid rgba(225, 29, 72, 0.6)",
+                color: "#ff4d6d",
+                padding: "0.42rem 0.85rem",
+                borderRadius: "8px",
+                fontSize: "0.78rem",
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.35rem",
+                flexShrink: 0,
+                boxShadow: "0 2px 8px rgba(225, 29, 72, 0.25)",
+                transition: "all 0.15s ease"
+              }}
+              title="Sign out immediately"
+            >
+              <span>🚪</span>
+              <span>{t("logout")}</span>
+            </button>
+          </div>
+        )}
+
         {/* Tab Navigation */}
         <div style={{
           display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
-          gap: "0.3rem",
-          padding: "0.8rem 1.5rem",
+          gridTemplateColumns: currentUser ? "repeat(5, 1fr)" : "repeat(4, 1fr)",
+          gap: "0.25rem",
+          padding: "0.75rem 1.2rem",
           background: "rgba(0,0,0,0.2)",
           borderBottom: "1px solid var(--border-subtle)"
         }}>
@@ -214,7 +312,8 @@ export const SettingsDrawer = () => {
             { id: "appearance", label: t("themesTab"), icon: "🎨" },
             { id: "typography", label: t("typeTab"), icon: "🔤" },
             { id: "localization", label: t("localeTab"), icon: "🌐" },
-            { id: "sensory", label: t("sensoryTab"), icon: "⚡" }
+            { id: "sensory", label: t("sensoryTab"), icon: "⚡" },
+            ...(currentUser ? [{ id: "account", label: t("accountTab") || "Account", icon: "👤" }] : [])
           ].map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -228,15 +327,15 @@ export const SettingsDrawer = () => {
                   background: isActive ? "var(--crimson-500)" : "transparent",
                   color: isActive ? "#ffffff" : "var(--text-secondary)",
                   border: "none",
-                  padding: "0.45rem 0.2rem",
+                  padding: "0.45rem 0.15rem",
                   borderRadius: "8px",
                   fontWeight: 700,
-                  fontSize: "0.78rem",
+                  fontSize: "0.75rem",
                   cursor: "pointer",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  gap: "0.3rem",
+                  gap: "0.25rem",
                   transition: "all 0.15s ease"
                 }}
               >
@@ -655,30 +754,224 @@ export const SettingsDrawer = () => {
               </div>
             </div>
           )}
+
+          {/* TAB 5: ACCOUNT & ACTIVE SESSION */}
+          {activeTab === "account" && currentUser && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "1.3rem" }}>
+              {/* Profile Card */}
+              <div style={{
+                background: "rgba(255, 255, 255, 0.03)",
+                border: "1px solid var(--border-subtle)",
+                borderRadius: "14px",
+                padding: "1.2rem",
+                display: "flex",
+                flexDirection: "column",
+                gap: "1rem"
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                  <img
+                    src={getSafeImageUrl(currentUser.avatar)}
+                    alt={currentUser.name}
+                    onError={handleImageError}
+                    style={{
+                      width: "60px",
+                      height: "60px",
+                      borderRadius: "50%",
+                      objectFit: "cover",
+                      border: "3px solid var(--crimson-500)",
+                      boxShadow: "0 0 16px rgba(225, 29, 72, 0.35)"
+                    }}
+                  />
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                      {currentUser.name}
+                    </h3>
+                    <div style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginTop: "0.2rem" }}>
+                      {currentUser.email}
+                    </div>
+                    <div style={{
+                      display: "inline-block",
+                      marginTop: "0.4rem",
+                      background: "rgba(225, 29, 72, 0.15)",
+                      color: "var(--gold-400)",
+                      border: "1px solid rgba(225, 29, 72, 0.4)",
+                      borderRadius: "20px",
+                      padding: "0.2rem 0.75rem",
+                      fontSize: "0.74rem",
+                      fontWeight: 700
+                    }}>
+                      👑 {currentUser.roleLabel || currentUser.role?.toUpperCase()}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "0.6rem",
+                  paddingTop: "0.8rem",
+                  borderTop: "1px solid var(--border-subtle)",
+                  fontSize: "0.76rem"
+                }}>
+                  <div style={{ background: "rgba(0,0,0,0.2)", padding: "0.6rem 0.8rem", borderRadius: "8px" }}>
+                    <div style={{ color: "var(--text-muted)", marginBottom: "0.2rem" }}>User ID</div>
+                    <div style={{ fontWeight: 600, color: "var(--text-secondary)" }}>#{currentUser.id || "001"}</div>
+                  </div>
+                  <div style={{ background: "rgba(0,0,0,0.2)", padding: "0.6rem 0.8rem", borderRadius: "8px" }}>
+                    <div style={{ color: "var(--text-muted)", marginBottom: "0.2rem" }}>Branch Location</div>
+                    <div style={{ fontWeight: 600, color: "var(--text-secondary)" }}>{currentUser.branchName || "Chennai Hub"}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Role Switcher (Mentor Mode) */}
+              <div>
+                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "0.3rem" }}>
+                  {t("switchDemoRoleTitle")}
+                </label>
+                <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", margin: "0 0 0.7rem 0" }}>
+                  {t("switchDemoRoleSub")}
+                </p>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+                  {[
+                    { role: "super_admin", label: "👑 Super Admin", sub: "All modules & audit" },
+                    { role: "bakery_owner", label: "🏢 Bakery Owner", sub: "Executive & P&L" },
+                    { role: "manager", label: "💼 Manager", sub: "Store & Rosters" },
+                    { role: "head_baker", label: "👨‍🍳 Head Baker", sub: "Production & Batches" },
+                    { role: "cashier", label: "💳 POS Cashier", sub: "Store Checkout" },
+                    { role: "customer", label: "🛍️ Customer", sub: "Retail & 3D Cake" }
+                  ].map((r) => {
+                    const isSelected = currentUser.role === r.role;
+                    return (
+                      <button
+                        key={r.role}
+                        type="button"
+                        onClick={async () => {
+                          playChime("click");
+                          if (switchDemoRole) {
+                            await switchDemoRole(r.role);
+                          }
+                        }}
+                        style={{
+                          background: isSelected ? "var(--crimson-light)" : "rgba(255, 255, 255, 0.03)",
+                          border: isSelected ? "2px solid var(--crimson-500)" : "1px solid var(--border-subtle)",
+                          borderRadius: "10px",
+                          padding: "0.6rem 0.75rem",
+                          cursor: "pointer",
+                          textAlign: "left",
+                          color: isSelected ? "var(--crimson-500)" : "var(--text-secondary)",
+                          transition: "all 0.15s ease"
+                        }}
+                      >
+                        <div style={{ fontSize: "0.82rem", fontWeight: 700 }}>{r.label}</div>
+                        <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>{r.sub}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Danger Zone: Session Logout */}
+              <div style={{
+                background: "rgba(225, 29, 72, 0.06)",
+                border: "1px solid rgba(225, 29, 72, 0.35)",
+                borderRadius: "12px",
+                padding: "1.1rem",
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.75rem"
+              }}>
+                <div>
+                  <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "#ff4d6d", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                    <span>🔒</span>
+                    <span>{t("accountSecurity")}</span>
+                  </div>
+                  <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "0.2rem" }}>
+                    {t("accountSecuritySub")}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  id="bk-settings-drawer-main-logout"
+                  onClick={handleLogout}
+                  style={{
+                    background: "linear-gradient(135deg, #e11d48, #9f1239)",
+                    border: "none",
+                    borderRadius: "10px",
+                    color: "#ffffff",
+                    fontWeight: 700,
+                    fontSize: "0.92rem",
+                    padding: "0.8rem 1.2rem",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "0.5rem",
+                    boxShadow: "0 4px 14px rgba(225, 29, 72, 0.35)",
+                    transition: "all 0.2s ease"
+                  }}
+                >
+                  <span style={{ fontSize: "1.1rem" }}>🚪</span>
+                  <span>{t("logoutBtn")}</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer Actions */}
         <div style={{
-          padding: "1.2rem 1.5rem",
+          padding: "1.1rem 1.5rem",
           borderTop: "1px solid var(--border-subtle)",
           background: "rgba(0,0,0,0.15)",
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "center"
+          alignItems: "center",
+          gap: "0.8rem"
         }}>
-          <button
-            onClick={resetDefaults}
-            style={{
-              background: "transparent",
-              border: "none",
-              color: "var(--text-muted)",
-              cursor: "pointer",
-              fontSize: "0.78rem",
-              textDecoration: "underline"
-            }}
-          >
-            {t("resetDefaults")}
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.8rem" }}>
+            <button
+              onClick={resetDefaults}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "var(--text-muted)",
+                cursor: "pointer",
+                fontSize: "0.76rem",
+                textDecoration: "underline"
+              }}
+            >
+              {t("resetDefaults")}
+            </button>
+
+            {currentUser && (
+              <button
+                type="button"
+                id="bk-settings-footer-logout-btn"
+                onClick={handleLogout}
+                style={{
+                  background: "rgba(225, 29, 72, 0.12)",
+                  border: "1px solid rgba(225, 29, 72, 0.4)",
+                  color: "#ff4d6d",
+                  borderRadius: "8px",
+                  padding: "0.42rem 0.85rem",
+                  fontSize: "0.78rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.35rem",
+                  transition: "all 0.15s ease"
+                }}
+                title="Log out of current account"
+              >
+                <span>🚪</span>
+                <span>{t("logout")}</span>
+              </button>
+            )}
+          </div>
 
           <button
             onClick={closeSettings}

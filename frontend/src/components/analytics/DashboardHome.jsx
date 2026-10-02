@@ -137,8 +137,8 @@ export const DashboardHome = ({ onNavigateTab }) => {
             <button onClick={() => onNavigateTab("custom-cake")} className="btn-outline">
               <span>🎂</span> {t("customOrder")}
             </button>
-            <button onClick={() => onNavigateTab("api-docs")} className="btn-outline">
-              <span>⚡</span> {t("apiDocs")}
+            <button onClick={() => onNavigateTab("ai-forecast")} className="btn-outline">
+              <span>📈</span> {t("navAiForecaster") || "AI Demand Forecaster"}
             </button>
           </div>
         </div>

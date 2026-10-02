@@ -22,6 +22,7 @@ export const translations = {
     navAiForecaster: "AI Forecaster",
     navExecutiveDashboard: "Executive Dashboard",
     navBranches: "Branches",
+    navBilling: "Billing & Invoices",
     navApiDocs: "API Docs",
 
     // Storefront Hero & Sections
@@ -103,6 +104,13 @@ export const translations = {
     compactSub: "Dense ERP data tables",
     resetDefaults: "↺ Reset Defaults",
     applyClose: "Apply & Close ✓",
+    accountTab: "Account",
+    accountSecurity: "Account & Active Session",
+    accountSecuritySub: "Manage current authenticated identity, role & permissions",
+    activeSession: "Active Session",
+    switchDemoRoleTitle: "Quick Switch Role (Mentor Demo)",
+    switchDemoRoleSub: "Test the ERP and storefront experience across roles instantly",
+    logoutBtn: "Log Out of BakeSphere",
 
     // ERP & Common
     dashboard: "Admin Dashboard",
@@ -181,6 +189,7 @@ export const translations = {
     navAiForecaster: "AI விற்பனை கணிப்பு",
     navExecutiveDashboard: "நிர்வாக பலகை",
     navBranches: "கிளைகள் & சாதனங்கள்",
+    navBilling: "பில்லிங் & ரசீதுகள்",
     navApiDocs: "API தளம்",
 
     // Storefront Hero & Sections
@@ -262,6 +271,13 @@ export const translations = {
     compactSub: "அடர்த்தியான அட்டவணைகள்",
     resetDefaults: "↺ மீட்டமைக்க",
     applyClose: "பயன்படுத்து & மூடு ✓",
+    accountTab: "கணக்கு",
+    accountSecurity: "கணக்கு & அமர்வு மேலாண்மை",
+    accountSecuritySub: "செயலில் உள்ள பயனர் விவரங்களை நிர்வகிக்கவும்",
+    activeSession: "செயலில் உள்ள பயனர்",
+    switchDemoRoleTitle: "பயனர் பங்கை மாற்றவும்",
+    switchDemoRoleSub: "அனைத்து பொறுப்புகளையும் எளிதாக சோதிக்கவும்",
+    logoutBtn: "BakeSphere-லிருந்து வெளியேறு",
 
     // ERP & Common
     dashboard: "நிர்வாக பலகை",
@@ -340,6 +356,7 @@ export const translations = {
     navAiForecaster: "एआई पूर्वानुमान",
     navExecutiveDashboard: "व्यवस्थापक डैशबोर्ड",
     navBranches: "शाखाएं और उपकरण",
+    navBilling: "बिलिंग और रसीदें",
     navApiDocs: "एपीआई एक्सप्लोरर",
 
     // Storefront Hero & Sections
@@ -421,6 +438,13 @@ export const translations = {
     compactSub: "अधिक डेटा दिखाने वाला लेआउट",
     resetDefaults: "↺ डिफ़ॉल्ट रीसेट करें",
     applyClose: "लागू करें और बंद करें ✓",
+    accountTab: "खाता",
+    accountSecurity: "खाता और सक्रिय सत्र",
+    accountSecuritySub: "सक्रिय उपयोगकर्ता पहचान और अनुमतियों का प्रबंधन करें",
+    activeSession: "सक्रिय उपयोगकर्ता",
+    switchDemoRoleTitle: "त्वरित भूमिका स्विच (डेमो)",
+    switchDemoRoleSub: "विभिन्न भूमिकाओं के रूप में सिस्टम का परीक्षण करें",
+    logoutBtn: "BakeSphere से लॉग आउट करें",
 
     // ERP & Common
     dashboard: "व्यवस्थापक डैशबोर्ड",
@@ -499,6 +523,7 @@ export const translations = {
     navAiForecaster: "Prévisions IA",
     navExecutiveDashboard: "Tableau de Bord",
     navBranches: "Boutiques & Équipements",
+    navBilling: "Facturation & Reçus",
     navApiDocs: "Explorateur API",
 
     // Storefront Hero & Sections
@@ -580,6 +605,13 @@ export const translations = {
     compactSub: "Idéal pour les grilles denses",
     resetDefaults: "↺ Réinitialiser",
     applyClose: "Appliquer & Fermer ✓",
+    accountTab: "Compte",
+    accountSecurity: "Compte & Session Active",
+    accountSecuritySub: "Gérer l'identité connectée et les autorisations",
+    activeSession: "Utilisateur Connecté",
+    switchDemoRoleTitle: "Changer de Rôle Démo",
+    switchDemoRoleSub: "Testez l'ERP sous différents profils instantanément",
+    logoutBtn: "Se déconnecter de BakeSphere",
 
     // ERP & Common
     dashboard: "Tableau de Bord",

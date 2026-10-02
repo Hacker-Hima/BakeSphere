@@ -430,35 +430,385 @@ const getFallbackAnswer = (message, userRole = "customer", userName = "Guest") =
     };
   }
 
-  // 13. User Role & Functionalities Query
-  if (
-    query.includes("what is my role") ||
-    query.includes("my role") ||
-    query.includes("what are my functionalities") ||
-    query.includes("my permissions") ||
-    query.includes("who am i")
-  ) {
-    const roleLabels = {
-      super_admin: "👑 Super Admin (Full Enterprise Access)",
-      bakery_owner: "💼 Bakery Owner / Executive Director",
-      manager: "📋 Branch Operations Manager",
-      head_baker: "🧑‍🍳 Master Baker & Production Lead",
-      chef: "👨‍🍳 Pastry Chef & Artisan Baker",
-      cashier: "🛒 POS Billing Cashier",
-      customer: "🛍️ Valued Guest & Bakery Connoisseur"
+  // 13. Comprehensive User Role & Functionalities Query
+  const isRoleQuery = (
+    query.includes("role") ||
+    query.includes("who am i") ||
+    query.includes("who i am") ||
+    query.includes("signed in") ||
+    query.includes("logged in") ||
+    query.includes("my account") ||
+    query.includes("my profile") ||
+    query.includes("current user") ||
+    query.includes("my permission") ||
+    query.includes("permissions") ||
+    query.includes("privilege") ||
+    query.includes("privileges") ||
+    query.includes("functionality") ||
+    query.includes("functionalities") ||
+    query.includes("what can i do") ||
+    query.includes("am i admin") ||
+    query.includes("am i manager") ||
+    query.includes("am i chef") ||
+    query.includes("am i baker") ||
+    query.includes("am i customer") ||
+    query.includes("am i cashier") ||
+    query.includes("switch role") ||
+    query.includes("access level")
+  );
+
+  if (isRoleQuery) {
+    const roleProfiles = {
+      super_admin: {
+        badge: "👑 Super Admin (Full Enterprise Access)",
+        title: "Enterprise Root Administrator",
+        branch: "Heritage Main (T. Nagar)",
+        description: "You have full, unrestricted governance across all 7 cloud hubs. You can manage employee logins, view global P&L financials, edit system configurations, audit security logs, and supervise POS & kitchen pipelines.",
+        capabilities: [
+          "📊 Executive Dashboard & Live Branch Financial Telemetry",
+          "🛒 POS Billing Terminal & Cash Register Supervision",
+          "🧑‍🍳 Recipe Scaling & Production Batch Approvals",
+          "⏳ FEFO Inventory Audits & Critical Stock Reorders",
+          "📈 AI Demand Forecasting & Wastage Risk Optimization",
+          "⚡ API Documentation & Developer Key Management"
+        ],
+        quickActions: ["Generate Full Sales Report", "Category Sales Breakdown", "Check Kitchen Stock Report", "Open POS Billing Terminal"]
+      },
+      bakery_owner: {
+        badge: "💼 Bakery Owner / Executive Director",
+        title: "Bakery Owner & Executive Director",
+        branch: "Heritage Main (T. Nagar)",
+        description: "You hold executive commercial governance over BakeSphere. You have real-time visibility into branch revenues, monthly sales targets, margin calculations, supplier contracts, and menu pricing controls.",
+        capabilities: [
+          "📊 Enterprise Financial Reports & Branch Telemetry",
+          "📈 AI Demand Forecasting & Margin Analytics",
+          "📦 Supplier Contracts & Purchase Orders",
+          "🛒 POS Terminal Oversight & Daily Register Reconciliation"
+        ],
+        quickActions: ["Generate Full Sales Report", "Category Sales Breakdown", "Check Kitchen Stock Report", "AI Demand Forecast"]
+      },
+      manager: {
+        badge: "📋 Branch Operations Manager",
+        title: "Branch Operations Manager",
+        branch: "Anna Nagar Flagship Hub",
+        description: "You manage daily operational workflows at your branch. You approve daily baking production batches, supervise shift rosters, trigger ingredient purchase orders, and monitor counter POS registers.",
+        capabilities: [
+          "📋 Production Batch Approvals & Oven Scheduling",
+          "⏳ FEFO Inventory Tracking & Reorder Approvals",
+          "🛒 Touchscreen POS Billing & Shift Cash Reconciliation",
+          "📊 Branch Sales & Category Performance Snapshots"
+        ],
+        quickActions: ["Category Sales Breakdown", "Check Kitchen Stock Report", "Open POS Billing Terminal", "AI Demand Forecast"]
+      },
+      head_baker: {
+        badge: "🧑‍🍳 Master Baker & Production Lead",
+        title: "Head Chef & Master Baker",
+        branch: "Heritage Main Bakery",
+        description: "Chef Pierre Bouchard's station! You hold master command over the bakery kitchen: precision formula scaling, oven batch scheduling, FEFO ingredient consumption, wastage loss audits, and hygiene checklists.",
+        capabilities: [
+          "🧑‍🍳 Mathematical Recipe Scaling Engine",
+          "🔥 Oven & Proofing Batch Scheduling",
+          "⏳ FEFO First-Expiry Ingredient Depletion",
+          "🎂 3D Custom Cake Production Specifications",
+          "🗑️ Kitchen Wastage Prevention & Audit Logs"
+        ],
+        quickActions: ["Scale Chocolate Cake Recipe", "Check Kitchen Stock Report", "Open 3D Studio", "AI Demand Forecast"]
+      },
+      chef: {
+        badge: "👨‍🍳 Pastry Chef & Artisan Baker",
+        title: "Pastry Chef & Artisan Baker",
+        branch: "Heritage Main Bakery",
+        description: "Culinary craft in action! You handle sponge whipping, lamination, Belgian chocolate tempering, and batch execution following master formulas.",
+        capabilities: [
+          "🧑‍🍳 Recipe Scaling & Baker's Percentage Formulas",
+          "🔥 Daily Oven Production Batches",
+          "⏳ Kitchen Ingredient Requisitions",
+          "🎂 3D Custom Cake Assembly & Decorating"
+        ],
+        quickActions: ["Scale Chocolate Cake Recipe", "Check Kitchen Stock Report", "Design Custom 3D Cake", "Hot Savory Puffs"]
+      },
+      cashier: {
+        badge: "🛒 POS Billing Cashier",
+        title: "POS Billing Specialist",
+        branch: "Koyambedu Transit Hub",
+        description: "Front-of-house operations! You manage fast touchscreen billing, thermal invoice generation, split payments (Cash, Cards, UPI QR), and daily counter cash register reconciliation.",
+        capabilities: [
+          "🛒 Rapid Barcode & Touchscreen Billing",
+          "🧾 80mm ESC/POS Thermal Invoice Printing",
+          "💳 Split Payment Handling (Cash / Card / UPI)",
+          "💰 End-of-Day Cash Drawer Reconciliation"
+        ],
+        quickActions: ["Open POS Billing Terminal", "Apply SWEET15 Coupon", "View Bestseller Cakes", "Track Order BS-1024"]
+      },
+      customer: {
+        badge: "🛍️ Valued Guest & Connoisseur",
+        title: "Valued Customer",
+        branch: "All 7 City Hubs",
+        description: "Welcome to BakeSphere! You enjoy complete access to our online storefront, interactive 3D Custom Cake Studio, active promo discount codes (SWEET15, BAKE50), live 2-hour delivery tracking, and loyalty rewards.",
+        capabilities: [
+          "🎂 Interactive 3D Custom Cake Studio Builder",
+          "🍰 Online Artisanal Bakery & Snack Storefront",
+          "🎁 Discount Coupons (SWEET15: 15% OFF, BAKE50: ₹50 OFF)",
+          "🚚 2-Hour Express & Midnight Surprise Delivery",
+          "📦 Live Real-Time Doorstep Order Tracking"
+        ],
+        quickActions: ["View Bestseller Cakes", "Show Active Coupons (SWEET15)", "Design Custom 3D Cake", "Explore Hot Savory Puffs"]
+      }
     };
+
+    const profile = roleProfiles[userRole] || roleProfiles.customer;
+    const nameDisplay = userName && userName !== "Guest" ? `**${userName}**` : "Guest";
+
     return {
-      reply: `Bonjour **${userName}**! You are logged in as **${roleLabels[userRole] || roleLabels.customer}**.\n\n` +
-        (isStaff
-          ? `You have access to live kitchen telemetry, category analytics, inventory batches, and POS systems. How can I assist your operations?`
-          : `You have full access to our online storefront, 3D Custom Cake Studio, active coupons, and doorstep delivery tracking!`),
-      quickActions: isStaff
-        ? ["Category Sales Breakdown", "Check Kitchen Stock Report", "AI Demand Forecast"]
-        : ["View Bestseller Cakes", "Show Active Coupons", "Design Custom 3D Cake"]
+      reply: `👤 **Account & Operational Role Identity**:\n\n` +
+        `Bonjour ${nameDisplay}! You are currently signed in as:\n` +
+        `• **Role**: ${profile.badge}\n` +
+        `• **Official Designation**: **${profile.title}**\n` +
+        `• **Primary Hub**: 📍 ${profile.branch}\n\n` +
+        `📝 **Role Summary & Responsibilities**:\n${profile.description}\n\n` +
+        `🔑 **Your System Capabilities & Modules**:\n` +
+        profile.capabilities.map(c => `• ${c}`).join("\n") + "\n\n" +
+        (isStaff 
+          ? `💡 *Staff Tip*: Ask me for live **Category Sales reports**, **Stock audits**, or **Recipe scaling** anytime!`
+          : `💡 *Guest Tip*: Try designing a cake in our **3D Custom Studio** or use code **SWEET15** for 15% off celebration cakes!`),
+      quickActions: profile.quickActions
     };
   }
 
-  // 14. Greetings & Introductions
+  // 14. Direct Navigation Commands
+  const isNavQuery = (
+    query.startsWith("take me to") ||
+    query.startsWith("open") ||
+    query.startsWith("go to") ||
+    query.startsWith("navigate to") ||
+    query.startsWith("switch to") ||
+    query.startsWith("launch") ||
+    query.startsWith("show me the") ||
+    (query.includes("take me") && (query.includes("studio") || query.includes("cake") || query.includes("pos") || query.includes("inventory") || query.includes("shop")))
+  );
+
+  if (isNavQuery) {
+    if (query.includes("3d") || query.includes("custom cake") || query.includes("cake studio") || query.includes("cake builder") || query.includes("design cake")) {
+      return {
+        reply: "🚀 **Navigating you to the 3D Custom Cake Studio now!**\n\n" +
+          "Welcome to our real-time 3D Parametric Cake Builder! Here you can:\n" +
+          "• 🎂 Select 1, 2, or 3 celebration tiers with live geometry\n" +
+          "• 🍫 Choose gourmet sponges: Madagascar Vanilla, Belgian Dark Cocoa, Red Velvet, or Funfetti\n" +
+          "• 🍦 Pair with Swiss Meringue, White Chocolate Cream Cheese, or Dark Ganache\n" +
+          "• ✨ Add 24K Edible Gold drips, Belgian truffles, or wild berry coulis\n" +
+          "• 👑 Place custom golden plaques, sparklers, and sugar flowers with live weight & price scaling!\n\n" +
+          "Your 3D studio is ready right now on your screen!",
+        quickActions: ["Bestseller Cakes", "Show Active Coupons", "Explore Hot Savories"],
+        navigateTo: "custom-cake"
+      };
+    }
+    if (query.includes("pos") || query.includes("billing") || query.includes("cashier") || query.includes("counter")) {
+      if (!["super_admin", "bakery_owner", "manager", "cashier"].includes(userRole)) {
+        return {
+          reply: "🔒 **POS Billing Terminal Access Restricted**:\n\nThe Touchscreen POS Billing terminal is reserved for Cashiers, Store Managers, and Admins.\n\nAs a customer, you can order directly through our **Online Bakery Storefront** or **3D Custom Cake Studio** with instant digital payment!",
+          quickActions: ["Open Online Storefront", "Design Custom 3D Cake", "Show Active Coupons"]
+        };
+      }
+      return {
+        reply: "🛒 **Navigating you to the POS Billing Terminal!**\n\nTouchscreen POS is ready for fast counter sales with thermal receipt printing and split payments.",
+        quickActions: ["Apply SWEET15 Code", "Category Sales Report", "Check Kitchen Stock"],
+        navigateTo: "pos"
+      };
+    }
+    if (query.includes("inventory") || query.includes("stock") || query.includes("fefo") || query.includes("ingredient")) {
+      if (!isStaff) {
+        return {
+          reply: "🔒 **Inventory & FEFO Module Access Restricted**:\n\nKitchen stock audits and FEFO batches are managed by kitchen staff and managers.",
+          quickActions: ["View Bestseller Cakes", "Show Active Coupons", "Design Custom 3D Cake"]
+        };
+      }
+      return {
+        reply: "⏳ **Navigating you to the FEFO Inventory & Stock Manager!**\n\nTrack raw pantry ingredients with automated expiry lot tracking.",
+        quickActions: ["Check Kitchen Stock Report", "Scale Chocolate Cake Recipe", "AI Demand Forecast"],
+        navigateTo: "inventory"
+      };
+    }
+    if (query.includes("production") || query.includes("recipe") || query.includes("scaler") || query.includes("batch")) {
+      return {
+        reply: "🧑‍🍳 **Navigating you to Production & Recipe Scaler!**\n\nScale artisanal baking formulas with mathematical precision.",
+        quickActions: ["Scale Chocolate Cake Recipe", "Check Kitchen Stock Report", "Category Sales Report"],
+        navigateTo: "production"
+      };
+    }
+    if (query.includes("dashboard") || query.includes("analytics") || query.includes("sales report")) {
+      return {
+        reply: "📊 **Navigating you to Executive Dashboard & Analytics!**\n\nLive financial telemetry snapshot ready.",
+        quickActions: ["Category Sales Breakdown", "Check Kitchen Stock Report", "AI Demand Forecast"],
+        navigateTo: "dashboard"
+      };
+    }
+    if (query.includes("shop") || query.includes("store") || query.includes("menu") || query.includes("bakery") || query.includes("catalog")) {
+      return {
+        reply: "🍰 **Navigating you to the Online Bakery Storefront!**\n\nBrowse our fresh celebration cakes, hot savory puffs, and jar cakes!",
+        quickActions: ["View Bestseller Cakes", "Show Active Coupons", "Design Custom 3D Cake"],
+        navigateTo: "shop"
+      };
+    }
+  }
+
+  // 15. Customer Care, Helpline, Store Timings & Same Support
+  const isSupportQuery = (
+    query.includes("support") ||
+    query.includes("customer care") ||
+    query.includes("help desk") ||
+    query.includes("helpline") ||
+    query.includes("contact") ||
+    query.includes("phone number") ||
+    query.includes("phone no") ||
+    query.includes("call") ||
+    query.includes("customer service") ||
+    query.includes("timings") ||
+    query.includes("timing") ||
+    query.includes("opening hour") ||
+    query.includes("operating hour") ||
+    query.includes("store timing") ||
+    query.includes("same support") ||
+    query.includes("talk to human") ||
+    query.includes("assistance") ||
+    query.includes("help me") ||
+    query.includes("complaint")
+  );
+
+  if (isSupportQuery) {
+    return {
+      reply: "🛎️ **BakeSphere Customer Care & Master Baker Support**:\n\n" +
+        "Yes, absolutely! Our full customer support and culinary concierge services are active today:\n\n" +
+        "• ⏰ **Today's Operational Hours**: Cloud kitchens and customer support operate **7:00 AM – 11:00 PM daily** across all 7 cities.\n" +
+        "• 🌐 **24/7 Digital Studio**: Online ordering, 3D Custom Cake Studio, and Chef Pierre AI are live **24 hours a day**.\n" +
+        "• 📞 **Direct Concierge Hotline**: **+91 98401 23456** (Speak directly with our BakeSphere customer care desk).\n" +
+        "• 📧 **Email Assistance**: **support@bakesphere.com** (Typical reply within 15 minutes).\n" +
+        "• ⚡ **2-Hour Express Delivery**: Active today! Orders placed right now will be baked fresh, packed in insulated thermal boxes, and delivered within 2 hours.\n" +
+        "• 🌙 **Midnight Surprise Deliveries**: Open for booking today for 12:00 AM midnight celebrations!\n\n" +
+        "How may we assist your celebration or order today?",
+      quickActions: ["Design Custom 3D Cake", "View Bestseller Cakes", "Show Active Coupons (SWEET15)", "Track Live Order"]
+    };
+  }
+
+  // 16. Product Categories & Kids / Children Specialty Collections
+  const isCategoryOrKidsQuery = (
+    query.includes("kids") ||
+    query.includes("children") ||
+    query.includes("child") ||
+    query.includes("kid-friendly") ||
+    query.includes("birthday for kids") ||
+    query.includes("school party") ||
+    query.includes("category") ||
+    query.includes("categories") ||
+    query.includes("what do you sell") ||
+    query.includes("what items") ||
+    query.includes("menu sections") ||
+    query.includes("catalog list")
+  );
+
+  if (isCategoryOrKidsQuery) {
+    if (query.includes("kid") || query.includes("child") || query.includes("school party")) {
+      return {
+        reply: "🎈 **Kids Celebration & Children's Bakery Collections at BakeSphere**:\n\n" +
+          "We feature **5 dedicated categories designed especially for kids, children's birthdays, and school parties**:\n\n" +
+          "1. 🍫 **Carnival & Candy Celebration Cakes**\n" +
+          "   • **KitKat & Gems Carnival Cake** (₹799) — crunchy fence of crispy KitKat fingers filled with chocolate fudge sponge and crowned with colorful Gems!\n" +
+          "   • **Super Smash Choco Pinata Cake** (₹1,199) — comes with a wooden toy hammer for kids to smash open the chocolate dome and discover hidden candies!\n\n" +
+          "2. 🦄 **Fantasy, Themed & Pastel Fondant Cakes**\n" +
+          "   • **Rainbow Fantasy Pastel Fondant Cake** (₹1,099) — whimsical pastel rainbow tiers with edible sugar clouds.\n" +
+          "   • *Customizable in our 3D Studio*: Superheroes, Outer Space Galaxy, Dinosaurs, and Princess themes!\n\n" +
+          "3. 🌈 **Funfetti Rainbow Confetti & Vanilla Treats**\n" +
+          "   • Vanilla bean sponge dotted with baked-in rainbow confetti and frosted with silky white chocolate mousse.\n\n" +
+          "4. 🧁 **Mess-Free Cupcakes & Jar Cakes for Kids**\n" +
+          "   • **Oreo Cookies & Cream Jar Cake** (₹159) & **Dark Mocha Volcano Cupcake Duo** (₹179) — airtight glass jars perfect for school lunchboxes and party return gifts!\n\n" +
+          "5. 🌽 **Mild & Kid-Friendly Savories (Non-Spicy)**\n" +
+          "   • **Golden Sweet Corn & Cheese Puff** (₹50) — flaky pastry filled with sweet American corn and gooey mozzarella.\n" +
+          "   • **Paneer Corn Mild Samosa** (₹55) — savory, cheesy, and zero sharp spice!\n\n" +
+          "💡 *Parent Note*: All kids cakes are 100% vegetarian / eggless, made with natural fruit colorings and zero artificial trans fats!",
+        quickActions: ["Order KitKat Carnival Cake", "Design Custom 3D Cake", "Sweet Corn Cheese Puff", "Show Active Coupons (SWEET15)"]
+      };
+    }
+
+    return {
+      reply: "🥐 **BakeSphere Artisanal Product Catalog (10 Core Categories)**:\n\n" +
+        "We hand-craft over 60 fresh bakery treats every morning across 10 specialized categories:\n\n" +
+        "1. 🎂 **Celebration Cakes** (₹599–₹1,499) — Belgian Truffle, Red Velvet Cream Cheese, Black Forest Gateau, Lotus Biscoff\n" +
+        "2. 🧁 **Gourmet Cupcakes** (₹89–₹189) — Dark Mocha Lava, Salted Caramel Crunch, Funfetti Confetti\n" +
+        "3. 🥐 **Artisan Jar Cakes** (₹159–₹199) — Belgian Ganache, Oreo Cheesecake, Red Velvet Swirl in reusable glass jars\n" +
+        "4. 🍫 **Brownies & Blondies** (₹99–₹149) — Molten Fudge Walnut, Triple Belgian Cocoa, Lotus Speculoos\n" +
+        "5. 🍪 **Cookies & Macarons** (₹120–₹280) — Parisian Macarons, Sea Salt Choco Chunk, French Shortbread\n" +
+        "6. 🥟 **Hot Savory Puffs** (₹45–₹85) — Flaky Tandoori Paneer Tikka, Smoked Keema, Sweet Corn & Cheese\n" +
+        "7. 🥟 **Crispy Punjabi Samosas** (₹35–₹65) — Authentic Aloo, Paneer Corn, Jalapeno Cheddar\n" +
+        "8. 🥖 **Rustic European Breads** (₹95–₹180) — 48-Hour Wild Yeast Sourdough, French Baguette, Brioche Buns\n" +
+        "9. 🍮 **Desserts & Cheesecakes** (₹115–₹299) — New York Baked Cheesecake, Molten Choco Lava, Lemon Tart\n" +
+        "10. ☕ **Artisan Brews & Drinks** (₹40–₹170) — Kulhad Masala Chai, South Indian Filter Coffee, Spanish Latte\n\n" +
+        "Which category would you like to explore or order from today?",
+      quickActions: ["View Bestseller Cakes", "Hot Savory Puffs & Samosas", "Design Custom 3D Cake", "Show Active Coupons"]
+    };
+  }
+
+  // 17. Master Recipes & Baking Formulas
+  const isRecipeQuery = query.includes("recipe") || query.includes("how to make") || query.includes("how to bake") || query.includes("how do i make") || query.includes("how do i bake") || query.includes("baking steps") || query.includes("ingredients for") || (query.includes("ingredients") && query.includes("cake"));
+
+  if (isRecipeQuery) {
+    if (query.includes("red velvet")) {
+      return {
+        reply: "🎂 **Master Chef Pierre's Crimson Red Velvet Cake Formula** (Yields 1 kg):\n\n" +
+          "• **Ingredients**: 300g cake flour, 280g castor sugar, 15g Dutch cocoa powder, 120g European cultured butter, 240ml buttermilk, 2 eggs, 1 tsp vanilla bean paste, 1 tsp baking soda + 1 tsp white vinegar.\n" +
+          "• **Frosting**: 300g cold cream cheese, 120g softened butter, 200g icing sugar, 10ml Madagascar vanilla.\n" +
+          "• **Bake**: Pour into two 8-inch lined tins and bake at **175°C (350°F) for 30 minutes**.\n\n" +
+          "💡 *Chef Pierre's Secret*: The reaction between vinegar and buttermilk creates that trademark tender, velvety crumb!",
+        quickActions: ["Scale in Recipe Scaler", "Order Ready Red Velvet", "Show Active Coupons (SWEET15)"],
+        navigateTo: "production"
+      };
+    } else if (query.includes("sourdough") || query.includes("bread") || query.includes("boule")) {
+      return {
+        reply: "🥖 **San Francisco Style Wild Sourdough Boule Formula** (Yields 1 Boule - 850g):\n\n" +
+          "• **Ingredients**: 500g strong bread flour, 360ml spring water (72% hydration), 120g active mature levain starter, 10g sea salt.\n" +
+          "• **Method**: 45 min autolyse, fold in starter & salt, 4 stretch-and-folds over 2 hours, shape into banneton, cold retard at 4°C for 14 hours. Bake inside Dutch oven at **230°C for 45 minutes**!",
+        quickActions: ["Scale in Recipe Scaler", "Check Kitchen Stock Report", "Order Sourdough Boule"],
+        navigateTo: "production"
+      };
+    } else {
+      // Default: Belgian Chocolate Truffle Cake
+      return {
+        reply: "🎂 **Master Chef Pierre's Authentic Belgian Chocolate Truffle Cake Recipe** (Yields 1 kg):\n\n" +
+          "Here is our signature patisserie formula scaled with bakery precision:\n\n" +
+          "🥄 **Ingredients (Truffle Sponge)**:\n" +
+          "• **Fine Pastry Flour**: 300g (sifted)\n" +
+          "• **Dutch Process Cocoa Powder**: 60g (high fat 22-24% cocoa butter)\n" +
+          "• **Callebaut 54.5% Dark Chocolate**: 200g (finely chopped)\n" +
+          "• **Cultured European Butter**: 160g (unsalted)\n" +
+          "• **Castor Sugar**: 260g\n" +
+          "• **Heavy Dairy Cream (35% fat)**: 220ml\n" +
+          "• **Grade A Eggs**: 4 large (or 240g sweetened condensed milk + 60ml milk for 100% eggless)\n" +
+          "• **Madagascar Vanilla Extract**: 10ml\n" +
+          "• **Baking Powder & Soda**: 6g baking powder + 2g baking soda\n\n" +
+          "🍫 **Silky Whipped Callebaut Ganache**:\n" +
+          "• **Callebaut Dark Couverture**: 250g\n" +
+          "• **Warm Heavy Cream**: 200ml (scalded to 85°C)\n" +
+          "• **Unsalted Butter**: 30g (whisked in at 40°C for mirror gloss)\n\n" +
+          "🔥 **Step-by-Step Baking Method**:\n" +
+          "1. **Preheat Oven**: Set to **175°C (350°F)** standard bake. Butter and line two 8-inch round cake tins.\n" +
+          "2. **Melt Chocolate**: Gently melt Callebaut chocolate and butter over a warm water bath (bain-marie).\n" +
+          "3. **Whip Ribbon**: Whisk eggs and castor sugar for 5 minutes until pale, doubled in volume, and forms a thick ribbon.\n" +
+          "4. **Combine**: Fold melted chocolate into eggs. Sift dry flour, cocoa, and leavening in 3 additions, alternating with warm heavy cream.\n" +
+          "5. **Bake**: Pour into tins and bake for **32–35 minutes** until a skewer inserted in the center comes out clean.\n" +
+          "6. **Frosting**: Pour hot cream over dark chocolate, let stand 2 minutes, emulsify until glossy, chill, and frost your layered sponge!\n\n" +
+          "💡 *Chef Pierre's Secret Pro Tip*: Bloom the cocoa powder in 30ml of hot espresso before adding to the batter to dramatically unlock deeper chocolate notes!",
+        quickActions: ["Scale in Recipe Scaler", "Order Ready Belgian Cake", "Show Active Coupons (SWEET15)", "Baking Science Conversions"],
+        navigateTo: "production"
+      };
+    }
+  }
+
+  // 18. Greetings & Conversational
+  if (query.match(/\b(how are you|how r u|how are u|how do you do|how's it going|how is it going|whats up|what's up|how have you been)\b/)) {
+    return {
+      reply: "Magnifique! 👨‍🍳 The ovens are warm, the sweet aromas of 54% Callebaut dark chocolate, Madagascar vanilla, and French butter croissants are wafting through the BakeSphere bakery! I am delighted to be here with you. How are you doing today? Are you craving a decadent dessert, planning a special celebration cake, or looking for an artisan recipe?",
+      quickActions: ["View Bestseller Cakes", "Recipe of Chocolate Cake", "Show Active Coupons (SWEET15)", "Design Custom 3D Cake"]
+    };
+  }
+
   if (query.match(/\b(hi|hello|hey|bonjour|greetings|who are you|namaste|morning|evening)\b/)) {
     return {
       reply: `Bonjour ${userName !== "Guest" ? `**${userName}**` : ""}! 👨‍🍳 I am **Chef Pierre**, your Master Baker & AI Culinary Concierge at BakeSphere!\n\n` +
@@ -467,7 +817,7 @@ const getFallbackAnswer = (message, userRole = "customer", userName = "Guest") =
     };
   }
 
-  // 15. Gratitude & Praise
+  // 18. Gratitude & Praise
   if (query.match(/\b(thank|thanks|awesome|great|cool|good job|nice|love it|perfect)\b/)) {
     return {
       reply: "Merci beaucoup! 👨‍🍳 It is always my absolute pleasure to serve culinary delight. Let me know if you'd like to check out today's top picks, design a cake, or grab a discount code!",
@@ -475,7 +825,7 @@ const getFallbackAnswer = (message, userRole = "customer", userName = "Guest") =
     };
   }
 
-  // 16. Jokes & Humor
+  // 19. Jokes & Humor
   if (query.includes("joke") || query.includes("funny") || query.includes("laugh")) {
     const jokes = [
       "Why did the baker go to therapy? Because he was kneading some help! 😂",
@@ -488,19 +838,22 @@ const getFallbackAnswer = (message, userRole = "customer", userName = "Guest") =
     };
   }
 
-  // 17. Intelligent Non-Robotic Guidance (Zero-Spam Fallback)
+  // 20. Intelligent Non-Robotic Guidance (Zero-Spam Fallback)
   return {
-    reply: `Bonjour! 👨‍🍳 I'm Chef Pierre, your Master Baker AI at BakeSphere.\n\n` +
-      `I want to make sure you get the exact information you need. How can I best guide you today?\n\n` +
-      `• 🎂 **Bestsellers & Signature Treats**: Belgian chocolate truffle, red velvet, cheesecakes & eggless picks\n` +
-      `• 🥐 **Hot Savories & Brews**: Crispy puffs, Punjabi samosas, and South Indian filter coffee\n` +
+    reply: `Bonjour! 👨‍🍳 I'm **Chef Pierre**, your Master Baker & AI Culinary Concierge.\n\n` +
+      `I understand you're asking about "${message.trim()}". To ensure you get the exact help you need for your shop or bakery experience:\n\n` +
+      `• 👤 **Your Role & Permissions**: Ask "What is my role?" to see your operational privileges\n` +
+      `• 🎂 **Bestsellers & Custom Cakes**: Ask about our 3D Studio, Belgian Chocolate Truffle, or Red Velvet\n` +
+      `• 🎈 **Kids Collections**: Ask about KitKat Carnival Cake, Pinata Smash cakes, or Sweet Corn Puffs\n` +
+      `• 🛎️ **Customer Support**: We operate 7 AM – 11 PM daily with direct phone helpline (+91 98401 23456)\n` +
       `• 🎁 **Active Coupons**: Code **SWEET15** (15% off) & **BAKE50** (flat ₹50 off)\n` +
-      `• 🚚 **Orders & Delivery**: 2-hour express delivery in 7 major cities & live order tracking\n` +
-      `• 🎨 **3D Cake Studio**: Design multi-tier custom cakes with live 3D preview\n\n` +
-      `Pick an action below or ask me about any flavor, price, or recipe!`,
+      `• 🚚 **Delivery & Cities**: 2-hour express delivery in 7 major city hubs & midnight deliveries\n` +
+      `• 🔍 **Baking Science**: Ask me for substitutions (eggs/butter) or troubleshooting sinking cakes\n\n` +
+      (isStaff ? `📊 As verified staff, you can also ask for **Live Sales Reports**, **Stock Levels**, or **Recipe Scalers**!\n\n` : "") +
+      `How may I best guide you right now?`,
     quickActions: isStaff
-      ? ["Category Sales Breakdown", "Generate Full Sales Report", "Check Kitchen Stock Report", "Scale Chocolate Cake Recipe"]
-      : ["View Bestseller Cakes", "Show Active Coupons (SWEET15)", "Explore Hot Savory Puffs", "Design Custom 3D Cake"]
+      ? ["Check My Role & Permissions", "Category Sales Breakdown", "Check Kitchen Stock Report", "AI Demand Forecast"]
+      : ["What is My Role?", "View Bestseller Cakes", "Show Active Coupons (SWEET15)", "Design Custom 3D Cake"]
   };
 };
 
@@ -528,6 +881,49 @@ export const ChatbotModal = ({ onNavigateTab }) => {
   const [isTyping, setIsTyping] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [voiceNotice, setVoiceNotice] = useState("");
+  const [speakingMsgId, setSpeakingMsgId] = useState(null);
+  const [autoNarrate, setAutoNarrate] = useState(false);
+
+  const cleanTextForSpeech = (raw) => {
+    if (!raw) return "";
+    return raw
+      .replace(/\*\*(.*?)\*\*/g, "$1")
+      .replace(/#+\s*/g, "")
+      .replace(/\|/g, " ")
+      .replace(/•/g, " ")
+      .replace(/[-*]\s+/g, " ")
+      .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, "") // strip emojis for crystal clear narration
+      .replace(/\s+/g, " ")
+      .trim();
+  };
+
+  const speakBotMessage = (msgId, text) => {
+    if (typeof window === "undefined" || !window.speechSynthesis) {
+      alert("Text-to-speech audio narration is not supported in this browser.");
+      return;
+    }
+
+    if (speakingMsgId === msgId) {
+      window.speechSynthesis.cancel();
+      setSpeakingMsgId(null);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const clean = cleanTextForSpeech(text);
+    if (!clean) return;
+
+    const utterance = new SpeechSynthesisUtterance(clean);
+    utterance.lang = "en-US";
+    utterance.rate = 1.0;
+    utterance.pitch = 1.02;
+
+    utterance.onend = () => setSpeakingMsgId(null);
+    utterance.onerror = () => setSpeakingMsgId(null);
+
+    setSpeakingMsgId(msgId);
+    window.speechSynthesis.speak(utterance);
+  };
 
   const chatEndRef = useRef(null);
   const idCounter = useRef(100);
@@ -596,72 +992,204 @@ export const ChatbotModal = ({ onNavigateTab }) => {
     const text = textToSend || inputMessage;
     if (!text.trim()) return;
 
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      setSpeakingMsgId(null);
+    }
+
     if (isListening && recognitionRef.current) {
       recognitionRef.current.stop();
       setIsListening(false);
     }
 
+    // Direct local tab navigation intent detection
+    const queryLower = text.toLowerCase().trim();
+    if (onNavigateTab) {
+      if (queryLower.includes("3d") || queryLower.includes("custom cake") || queryLower.includes("cake studio")) {
+        onNavigateTab("custom-cake");
+      } else if (queryLower.includes("pos") || queryLower.includes("billing") || queryLower.includes("cashier")) {
+        if (["super_admin", "bakery_owner", "manager", "cashier"].includes(userRole)) {
+          onNavigateTab("pos");
+        }
+      } else if (queryLower.includes("inventory") || queryLower.includes("stock") || queryLower.includes("fefo")) {
+        if (["super_admin", "bakery_owner", "manager", "head_baker", "chef"].includes(userRole)) {
+          onNavigateTab("inventory");
+        }
+      } else if (queryLower.includes("production") || queryLower.includes("recipe scaler")) {
+        if (["super_admin", "bakery_owner", "manager", "head_baker", "chef"].includes(userRole)) {
+          onNavigateTab("production");
+        }
+      } else if (queryLower.includes("dashboard") || queryLower.includes("sales report")) {
+        if (["super_admin", "bakery_owner", "manager"].includes(userRole)) {
+          onNavigateTab("dashboard");
+        }
+      }
+    }
+
     idCounter.current += 1;
     const userMsg = { id: `user-${idCounter.current}`, sender: "user", text };
-    setMessages((prev) => [...prev, userMsg]);
+
+    // Create streaming bot message placeholder
+    idCounter.current += 1;
+    const botMsgId = `bot-${idCounter.current}`;
+    const botMsgPlaceholder = {
+      id: botMsgId,
+      sender: "bot",
+      text: "",
+      isStreaming: true,
+      quickActions: []
+    };
+
+    setMessages((prev) => [...prev, userMsg, botMsgPlaceholder]);
     setInputMessage("");
     setIsTyping(true);
 
     try {
-      const res = await fetch("http://localhost:5000/api/ai/chatbot", {
+      const res = await fetch("http://localhost:5000/api/ai/chatbot/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: text,
           role: userRole,
-          userName: userName
+          userName: userName,
+          history: messages.slice(-6)
         })
       });
-      const data = await res.json();
+
+      if (!res.ok || !res.body) {
+        throw new Error(`Server returned HTTP ${res.status}`);
+      }
 
       setIsTyping(false);
-      idCounter.current += 1;
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `bot-${idCounter.current}`,
-          sender: "bot",
-          text: data.reply || "Bon appétit! How else may I assist you today?",
-          quickActions: data.quickActions || []
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let accumulatedText = "";
+      let pendingQuickActions = [];
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith("data:")) continue;
+          const dataStr = trimmed.replace(/^data:\s*/, "");
+          if (dataStr === "[DONE]") {
+            break;
+          }
+
+          try {
+            const parsed = JSON.parse(dataStr);
+            if (parsed.metadata) {
+              if (parsed.metadata.quickActions) {
+                pendingQuickActions = parsed.metadata.quickActions;
+              }
+              if (parsed.metadata.navigateTo && onNavigateTab) {
+                onNavigateTab(parsed.metadata.navigateTo);
+              }
+            }
+            if (parsed.chunk) {
+              accumulatedText += parsed.chunk;
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === botMsgId
+                    ? { ...m, text: accumulatedText, isStreaming: true }
+                    : m
+                )
+              );
+            }
+            if (parsed.done) {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === botMsgId
+                    ? {
+                        ...m,
+                        text: accumulatedText || "Bon appétit! How else may I assist you today?",
+                        isStreaming: false,
+                        quickActions: pendingQuickActions
+                      }
+                    : m
+                )
+              );
+            }
+          } catch (_err) {
+            // Ignore partial parse
+          }
         }
-      ]);
+      }
+
+      // Finalize streaming state
+      const finalText = accumulatedText || "Bon appétit! How else may I assist you today?";
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === botMsgId
+            ? {
+                ...m,
+                text: finalText,
+                isStreaming: false,
+                quickActions:
+                  pendingQuickActions.length > 0
+                    ? pendingQuickActions
+                    : ["Active Coupons", "Bestseller Cakes", "Design 3D Cake"]
+              }
+            : m
+        )
+      );
+
+      if (autoNarrate) {
+        speakBotMessage(botMsgId, finalText);
+      }
     } catch (_err) {
-      console.warn("Chef Pierre API unreachable, using resilient local knowledge engine:", _err);
+      console.warn("Real-time stream unavailable, activating instant local fallback:", _err);
       setIsTyping(false);
       const fallback = getFallbackAnswer(text, userRole, userName);
-      idCounter.current += 1;
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `bot-${idCounter.current}`,
-          sender: "bot",
-          text: fallback.reply,
-          quickActions: fallback.quickActions
-        }
-      ]);
+
+      if (fallback.navigateTo && onNavigateTab) {
+        onNavigateTab(fallback.navigateTo);
+      }
+
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === botMsgId
+            ? {
+                ...m,
+                text: fallback.reply,
+                isStreaming: false,
+                quickActions: fallback.quickActions || []
+              }
+            : m
+        )
+      );
+
+      if (autoNarrate) {
+        speakBotMessage(botMsgId, fallback.reply);
+      }
     }
   };
 
   const handleQuickAction = (actionText) => {
-    if (actionText.includes("Custom Cake") || actionText.includes("3D")) {
-      onNavigateTab("custom-cake");
-    } else if (actionText.includes("Stock") || actionText.includes("Inventory") || actionText.includes("FEFO")) {
-      onNavigateTab("inventory");
-    } else if (actionText.includes("Scale") || actionText.includes("Recipe")) {
-      onNavigateTab("production");
-    } else if (actionText.includes("POS") || actionText.includes("Billing")) {
-      onNavigateTab("pos");
-    } else if (actionText.includes("Sales") || actionText.includes("Report") || actionText.includes("Forecast") || actionText.includes("Dashboard")) {
-      onNavigateTab("dashboard");
-    } else if (actionText.includes("Staff") || actionText.includes("Credential") || actionText.includes("Login")) {
-      onNavigateTab("login");
-    } else if (actionText.includes("Puff") || actionText.includes("Samosa") || actionText.includes("Cake") || actionText.includes("Storefront")) {
-      onNavigateTab("shop");
+    if (onNavigateTab) {
+      if (actionText.includes("Custom Cake") || actionText.includes("3D")) {
+        onNavigateTab("custom-cake");
+      } else if (actionText.includes("Stock") || actionText.includes("Inventory") || actionText.includes("FEFO")) {
+        onNavigateTab("inventory");
+      } else if (actionText.includes("Scale") || actionText.includes("Recipe") || actionText.includes("Production")) {
+        onNavigateTab("production");
+      } else if (actionText.includes("POS") || actionText.includes("Billing")) {
+        onNavigateTab("pos");
+      } else if (actionText.includes("Sales") || actionText.includes("Report") || actionText.includes("Forecast") || actionText.includes("Dashboard")) {
+        onNavigateTab("dashboard");
+      } else if (actionText.includes("Staff") || actionText.includes("Credential") || actionText.includes("Login")) {
+        onNavigateTab("login");
+      } else if (actionText.includes("Puff") || actionText.includes("Samosa") || actionText.includes("Cake") || actionText.includes("Storefront") || actionText.includes("Menu") || actionText.includes("Savories")) {
+        onNavigateTab("shop");
+      }
     }
     sendMessage(actionText);
   };
@@ -765,48 +1293,92 @@ export const ChatbotModal = ({ onNavigateTab }) => {
                   </h3>
                   <span
                     style={{
-                      background: "rgba(255, 255, 255, 0.2)",
-                      padding: "0.15rem 0.45rem",
+                      background: "rgba(255, 255, 255, 0.22)",
+                      padding: "0.15rem 0.5rem",
                       borderRadius: "10px",
                       fontSize: "0.68rem",
-                      fontWeight: 600
+                      fontWeight: 600,
+                      letterSpacing: "0.2px"
                     }}
                   >
                     {userRole === "super_admin"
-                      ? "Admin Mode"
-                      : userRole === "head_baker" || userRole === "chef"
-                      ? "Chef Mode"
-                      : userRole === "manager" || userRole === "bakery_owner"
-                      ? "Executive Mode"
-                      : "Customer Concierge"}
+                      ? "👑 Super Admin"
+                      : userRole === "head_baker"
+                      ? "🧑‍🍳 Master Baker"
+                      : userRole === "chef"
+                      ? "👨‍🍳 Pastry Chef"
+                      : userRole === "bakery_owner"
+                      ? "💼 Bakery Owner"
+                      : userRole === "manager"
+                      ? "📋 Branch Manager"
+                      : userRole === "cashier"
+                      ? "🛒 POS Cashier"
+                      : "🛍️ Valued Guest"}
                   </span>
                 </div>
-                <p style={{ margin: "0.15rem 0 0", fontSize: "0.75rem", opacity: 0.9 }}>
-                  Category Sales · Full Reports · Voice Typing
+                <p style={{ margin: "0.15rem 0 0", fontSize: "0.74rem", opacity: 0.95 }}>
+                  Signed in as: <strong>{userName}</strong>
                 </p>
               </div>
             </div>
 
-            <button
-              onClick={() => setIsOpen(false)}
-              style={{
-                background: "rgba(255, 255, 255, 0.15)",
-                border: "none",
-                borderRadius: "50%",
-                width: "32px",
-                height: "32px",
-                color: "#ffffff",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "1rem",
-                transition: "background 0.2s ease"
-              }}
-              title="Close Chat"
-            >
-              ✕
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <button
+                type="button"
+                onClick={() => {
+                  const nextState = !autoNarrate;
+                  setAutoNarrate(nextState);
+                  if (!nextState && typeof window !== "undefined" && window.speechSynthesis) {
+                    window.speechSynthesis.cancel();
+                    setSpeakingMsgId(null);
+                  }
+                }}
+                style={{
+                  background: autoNarrate ? "#ffffff" : "rgba(255, 255, 255, 0.2)",
+                  color: autoNarrate ? "#c8102e" : "#ffffff",
+                  border: "none",
+                  borderRadius: "20px",
+                  padding: "0.3rem 0.65rem",
+                  fontSize: "0.72rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.3rem",
+                  transition: "all 0.2s ease"
+                }}
+                title={autoNarrate ? "Auto-voice is ON (Chef Pierre reads answers aloud)" : "Auto-voice is OFF (Click to enable audio reading)"}
+              >
+                <span>{autoNarrate ? "🔊 Voice: ON" : "🔈 Voice: OFF"}</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  if (typeof window !== "undefined" && window.speechSynthesis) {
+                    window.speechSynthesis.cancel();
+                    setSpeakingMsgId(null);
+                  }
+                  setIsOpen(false);
+                }}
+                style={{
+                  background: "rgba(255, 255, 255, 0.15)",
+                  border: "none",
+                  borderRadius: "50%",
+                  width: "32px",
+                  height: "32px",
+                  color: "#ffffff",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "1rem",
+                  transition: "background 0.2s ease"
+                }}
+                title="Close Chat"
+              >
+                ✕
+              </button>
+            </div>
           </div>
 
           {/* Voice Notification Banner */}
@@ -872,8 +1444,74 @@ export const ChatbotModal = ({ onNavigateTab }) => {
                     width: "100%"
                   }}
                 >
-                  {m.sender === "bot" ? formatBotMessage(m.text) : m.text}
+                  {m.sender === "bot" ? (
+                    m.isStreaming && !m.text ? (
+                      <span
+                        style={{
+                          color: "#64748b",
+                          fontSize: "0.82rem",
+                          fontStyle: "italic",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.4rem"
+                        }}
+                      >
+                        <span>👨‍🍳</span> Chef Pierre is preparing a response...
+                      </span>
+                    ) : (
+                      <>
+                        {formatBotMessage(m.text)}
+                        {m.isStreaming && (
+                          <span
+                            style={{
+                              display: "inline-block",
+                              width: "7px",
+                              height: "13px",
+                              backgroundColor: "#c8102e",
+                              marginLeft: "4px",
+                              verticalAlign: "middle",
+                              borderRadius: "2px"
+                            }}
+                          />
+                        )}
+                      </>
+                    )
+                  ) : (
+                    m.text
+                  )}
                 </div>
+
+                {/* Speaker Audio Listen Button for Bot Messages */}
+                {m.sender === "bot" && m.text && !m.isStreaming && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginTop: "0.35rem" }}>
+                    <button
+                      type="button"
+                      onClick={() => speakBotMessage(m.id, m.text)}
+                      style={{
+                        background: speakingMsgId === m.id ? "#fee2e2" : "#f1f5f9",
+                        color: speakingMsgId === m.id ? "#b91c1c" : "#475569",
+                        border: speakingMsgId === m.id ? "1px solid #ef4444" : "1px solid #cbd5e1",
+                        borderRadius: "12px",
+                        padding: "0.22rem 0.55rem",
+                        fontSize: "0.72rem",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.25rem",
+                        cursor: "pointer",
+                        fontWeight: 600,
+                        transition: "all 0.15s ease"
+                      }}
+                      title={speakingMsgId === m.id ? "Click to stop voice audio" : "Listen to Chef Pierre read this answer"}
+                    >
+                      <span>{speakingMsgId === m.id ? "⏹️ Stop Voice" : "🔊 Listen (Audio AI)"}</span>
+                    </button>
+                    {speakingMsgId === m.id && (
+                      <span style={{ fontSize: "0.7rem", color: "#ef4444", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.2rem" }}>
+                        <span style={{ animation: "pulse 1.2s infinite" }}>●</span> Playing Audio...
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 {/* Quick Action Pills */}
                 {m.quickActions && m.quickActions.length > 0 && (
@@ -914,7 +1552,7 @@ export const ChatbotModal = ({ onNavigateTab }) => {
               </div>
             ))}
 
-            {isTyping && (
+            {isTyping && !messages.some((m) => m.isStreaming) && (
               <div
                 style={{
                   alignSelf: "flex-start",

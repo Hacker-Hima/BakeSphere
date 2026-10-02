@@ -11,6 +11,7 @@ export const BakingoStorefront = ({
   onOpenCart,
   onNavigateTab,
   searchQuery,
+  setSearchQuery,
   deliveryCity
 }) => {
   const { t } = useLanguage();
@@ -354,8 +355,51 @@ export const BakingoStorefront = ({
         </div>
       </section>
 
-      {/* ═══════════════ FILTER & SORT TOOLBAR ═══════════════ */}
+      {/* ═══════════════ FILTER & SORT TOOLBAR WITH INTEGRATED SEARCH ═══════════════ */}
       <section className="bk-toolbar-section">
+        {/* Single Modern Elevated Search Field (No nested boxes) */}
+        <div className="bk-store-search-wrapper">
+          <div className="bk-store-search-input-box">
+            <span className="bk-store-search-icon" aria-hidden="true">🔍</span>
+            <input
+              type="text"
+              className="bk-store-search-input"
+              placeholder="Search cakes, pastries, jar cakes, croissants, cupcakes..."
+              value={searchQuery || ""}
+              onChange={(e) => setSearchQuery && setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                className="bk-store-search-clear"
+                onClick={() => setSearchQuery && setSearchQuery("")}
+                title="Clear search"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          <div className="bk-store-search-tags">
+            <span className="bk-store-search-tags-label">Popular:</span>
+            {["Chocolate", "Red Velvet", "Fruit Cake", "Croissant", "Cheesecake", "Cupcakes"].map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                className={`bk-store-search-tag-chip ${searchQuery?.toLowerCase() === tag.toLowerCase() ? "active" : ""}`}
+                onClick={() => {
+                  if (setSearchQuery) {
+                    setSearchQuery(searchQuery?.toLowerCase() === tag.toLowerCase() ? "" : tag);
+                  }
+                  scrollToCatalog();
+                }}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="bk-toolbar-container">
           {/* Left: Eggless Toggle & Occasions */}
           <div className="bk-filter-group-left">
@@ -606,14 +650,16 @@ export const BakingoStorefront = ({
                           <button
                             type="button"
                             className="bk-stepper-btn"
+                            aria-label="Decrease quantity"
                             onClick={() => onUpdateQuantity(product.id, -1, currentWeight)}
                           >
-                            -
+                            −
                           </button>
                           <span className="bk-stepper-val">{cartQuantity}</span>
                           <button
                             type="button"
                             className="bk-stepper-btn"
+                            aria-label="Increase quantity"
                             onClick={() => onUpdateQuantity(product.id, 1, currentWeight)}
                           >
                             +
@@ -879,25 +925,6 @@ export const BakingoStorefront = ({
           </div>
         </div>
       </footer>
-
-      {/* Floating View Cart Pill */}
-      {cart && cart.length > 0 && (
-        <div className="bk-floating-cart-bar">
-          <div className="bk-floating-cart-inner">
-            <div className="bk-floating-cart-info">
-              <span>{cart.reduce((s, i) => s + i.quantity, 0)} Items Selected</span>
-              <strong>₹{cart.reduce((s, i) => s + (i.sellingPrice || i.price) * i.quantity, 0)}</strong>
-            </div>
-            <button
-              type="button"
-              className="bk-btn-floating-view-cart"
-              onClick={onOpenCart}
-            >
-              View Cart 🛒 →
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Floating Interactive Toast */}
       {toast.show && (

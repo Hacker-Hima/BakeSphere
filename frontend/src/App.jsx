@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
 import { LanguageProvider } from "./context/LanguageContext.jsx";
 import { RecentlyAccessedProvider, useRecentlyAccessed } from "./context/RecentlyAccessedContext.jsx";
 import { ThemeSettingsProvider, useThemeSettings } from "./context/ThemeSettingsContext.jsx";
+import { NotificationProvider, useNotifications } from "./context/NotificationContext.jsx";
 
 import { Navbar } from "./components/common/Navbar.jsx";
 import { ChatbotModal } from "./components/common/ChatbotModal.jsx";
@@ -15,23 +16,54 @@ import { CakeBuilder } from "./components/customCake/CakeBuilder.jsx";
 import { RecipeScaler } from "./components/production/RecipeScaler.jsx";
 import { StockManager } from "./components/inventory/StockManager.jsx";
 import { AiForecastStudio } from "./components/analytics/AiForecastStudio.jsx";
-import { ApiPlayground } from "./components/apiExplorer/ApiPlayground.jsx";
 import { BranchManager } from "./components/branches/BranchManager.jsx";
+import { BillingManager } from "./components/billing/BillingManager.jsx";
+import { BillModal } from "./components/billing/BillModal.jsx";
+import { OrderTrackingModal } from "./components/common/OrderTrackingModal.jsx";
+import { OrderHistoryModal } from "./components/common/OrderHistoryModal.jsx";
+import { FloatingNotificationToast } from "./components/common/FloatingNotificationToast.jsx";
 
 import { BakingoStorefront } from "./components/shop/BakingoStorefront.jsx";
 import { CartDrawer } from "./components/shop/CartDrawer.jsx";
+import { BottomCartBar } from "./components/shop/BottomCartBar.jsx";
 import { QuickViewModal } from "./components/shop/QuickViewModal.jsx";
 import { CitySelectorModal } from "./components/shop/CitySelectorModal.jsx";
 
 const AppContent = () => {
   const { currentUser, allowedTabs, hasPermission, role } = useAuth();
   const { playChime } = useThemeSettings();
+  const { activeBill, closeBill } = useNotifications();
   const [activeTab, setActiveTab] = useState("login");
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [cityModalOpen, setCityModalOpen] = useState(false);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [trackingModalOpen, setTrackingModalOpen] = useState(false);
+  const [activeTrackingOrder, setActiveTrackingOrder] = useState(null);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+
+  const handleOpenTracking = (orderData) => {
+    if (orderData) {
+      setActiveTrackingOrder(orderData);
+    } else {
+      try {
+        const savedInvoices = JSON.parse(localStorage.getItem("bakesphere_invoices") || "[]");
+        if (savedInvoices.length > 0) {
+          setActiveTrackingOrder(savedInvoices[0]);
+        } else {
+          setActiveTrackingOrder(null);
+        }
+      } catch {
+        setActiveTrackingOrder(null);
+      }
+    }
+    setTrackingModalOpen(true);
+  };
+
+  const handleOpenHistory = () => {
+    setHistoryModalOpen(true);
+  };
 
   const [deliveryCity, setDeliveryCity] = useState(() => {
     try {
@@ -100,13 +132,13 @@ const AppContent = () => {
 
     const tabMeta = {
       shop: { label: "Online Bakery", icon: "🍰" },
+      billing: { label: "Billing & Invoices", icon: "🧾" },
       dashboard: { label: "Executive Dashboard", icon: "📊" },
       pos: { label: "POS Billing", icon: "🛒" },
       "custom-cake": { label: "3D Cake Studio", icon: "🎂" },
       production: { label: "Production & Scaler", icon: "🧑‍🍳" },
       inventory: { label: "FEFO Inventory", icon: "⏳" },
       "ai-forecast": { label: "AI Forecaster", icon: "📈" },
-      "api-docs": { label: "API Explorer", icon: "⚡" },
       branches: { label: "Branches & Assets", icon: "🏪" }
     };
     if (tabMeta[tabId]) {
@@ -202,6 +234,8 @@ const AppContent = () => {
         onOpenCityModal={() => setCityModalOpen(true)}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
+        onOpenTracking={() => handleOpenTracking()}
+        onOpenHistory={handleOpenHistory}
       />
 
       {/* Main View Container */}
@@ -216,8 +250,16 @@ const AppContent = () => {
             onOpenCart={() => setCartDrawerOpen(true)}
             onNavigateTab={handleTabChange}
             searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
             deliveryCity={deliveryCity}
           />
+        )}
+
+        {/* Dedicated Billing & Invoicing Module */}
+        {hasPermission("billing") && activeTab === "billing" && (
+          <div className="bk-erp-container">
+            <BillingManager />
+          </div>
         )}
 
         {/* Existing ERP Modules with Consistent Bakingo Polish */}
@@ -235,7 +277,7 @@ const AppContent = () => {
 
         {hasPermission("custom-cake") && activeTab === "custom-cake" && (
           <div className="bk-erp-container">
-            <CakeBuilder />
+            <CakeBuilder onTrackOrder={handleOpenTracking} />
           </div>
         )}
 
@@ -254,12 +296,6 @@ const AppContent = () => {
         {hasPermission("ai-forecast") && activeTab === "ai-forecast" && (
           <div className="bk-erp-container">
             <AiForecastStudio />
-          </div>
-        )}
-
-        {hasPermission("api-docs") && activeTab === "api-docs" && (
-          <div className="bk-erp-container">
-            <ApiPlayground />
           </div>
         )}
 
@@ -303,6 +339,15 @@ const AppContent = () => {
         onOpenCart={() => setCartDrawerOpen(true)}
       />
 
+      {/* Persistent Floating Bottom Cart Bar */}
+      <BottomCartBar
+        cart={cart}
+        cartCount={cartCount}
+        cartTotal={cartTotal}
+        onOpenCart={() => setCartDrawerOpen(true)}
+        activeTab={activeTab}
+      />
+
       {/* Slide-out Cart Drawer */}
       <CartDrawer
         isOpen={cartDrawerOpen}
@@ -312,6 +357,7 @@ const AppContent = () => {
         onRemoveItem={handleRemoveItem}
         onClearCart={handleClearCart}
         deliveryCity={deliveryCity?.name}
+        onTrackOrder={handleOpenTracking}
       />
 
       {/* Delivery City Selector Modal */}
@@ -328,6 +374,44 @@ const AppContent = () => {
       {/* Dual OAuth & JWT Login Modal */}
       <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
 
+      {/* Global Real-Time Tax Invoice Bill Modal */}
+      <BillModal bill={activeBill} isOpen={Boolean(activeBill)} onClose={closeBill} />
+
+      {/* Live Visual Order Tracker & Kitchen Cold-Chain Timeline Modal */}
+      <OrderTrackingModal
+        isOpen={trackingModalOpen}
+        onClose={() => setTrackingModalOpen(false)}
+        orderData={activeTrackingOrder}
+        onOpenBill={(inv) => openBill(inv)}
+      />
+
+      {/* Customer Order History & Tax Invoice Archive Modal */}
+      <OrderHistoryModal
+        isOpen={historyModalOpen}
+        onClose={() => setHistoryModalOpen(false)}
+        onOpenBill={(inv) => openBill(inv)}
+        onTrackOrder={(order) => {
+          setActiveTrackingOrder(order);
+          setTrackingModalOpen(true);
+        }}
+        onReorder={(order) => {
+          if (order.items && order.items.length > 0) {
+            order.items.forEach((item) => {
+              handleAddToCart({
+                id: item.id || `reorder-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+                name: item.name,
+                price: item.unitPrice || item.price || 499,
+                image: item.image || "/images/chocolate-cake.jpg"
+              });
+            });
+            setCartDrawerOpen(true);
+          }
+        }}
+      />
+
+      {/* Floating Order & Bill Notification Toast */}
+      <FloatingNotificationToast />
+
       {/* Customization Settings Drawer */}
       <SettingsDrawer />
     </div>
@@ -340,7 +424,9 @@ export default function App() {
       <ThemeSettingsProvider>
         <RecentlyAccessedProvider>
           <AuthProvider>
-            <AppContent />
+            <NotificationProvider>
+              <AppContent />
+            </NotificationProvider>
           </AuthProvider>
         </RecentlyAccessedProvider>
       </ThemeSettingsProvider>

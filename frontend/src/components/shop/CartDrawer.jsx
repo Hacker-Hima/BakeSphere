@@ -2,6 +2,8 @@ import { useState } from "react";
 import confetti from "canvas-confetti";
 import { handleImageError, getSafeImageUrl } from "../../utils/imageFallback.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
+import { useNotifications } from "../../context/NotificationContext.jsx";
+import { useAuth } from "../../context/AuthContext.jsx";
 
 export const CartDrawer = ({
   isOpen,
@@ -10,9 +12,13 @@ export const CartDrawer = ({
   onUpdateQuantity,
   onRemoveItem,
   onClearCart,
-  deliveryCity
+  deliveryCity,
+  onTrackOrder
 }) => {
   const { t } = useLanguage();
+  const { currentUser } = useAuth();
+  const { addNotification, openBill } = useNotifications();
+
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponError, setCouponError] = useState("");
@@ -20,6 +26,7 @@ export const CartDrawer = ({
   const [deliveryPincode, setDeliveryPincode] = useState("600017");
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [placedOrderId, setPlacedOrderId] = useState("");
+  const [lastInvoice, setLastInvoice] = useState(null);
 
   if (!isOpen) return null;
 
@@ -70,10 +77,90 @@ export const CartDrawer = ({
       // safe fallback
     }
 
-    const newOrderId = `BK-${Date.now().toString().slice(-6)}`;
+    const newOrderId = `BS-${Date.now().toString().slice(-6)}`;
+    const invoiceNumber = `INV-${newOrderId}`;
+    const now = new Date();
+    const deliveryFee = subtotal >= 500 ? 0 : 50;
+    const cgst = parseFloat((taxable * 0.025).toFixed(2));
+    const sgst = parseFloat((taxable * 0.025).toFixed(2));
+    const totalGst = parseFloat((cgst + sgst).toFixed(2));
+    const grandTotal = parseFloat((taxable + totalGst + deliveryFee).toFixed(2));
+
+    const invoiceData = {
+      orderId: newOrderId,
+      invoiceNumber,
+      type: "online_delivery",
+      storeName: "BAKESPHERE PATISSERIE",
+      tagline: "Online Patisserie, Artisanal Viennoiserie & Custom Cakes",
+      gstin: "33AABCB1234E1Z0",
+      fssaiLicense: "12423008000451",
+      branchAddress: "Heritage Main Hub, 42 Venkatnarayana Rd, T. Nagar, Chennai 600017",
+      phone: "+91 44 2434 8890",
+      customerName: currentUser?.name || "Guest Gourmet",
+      customerPhone: currentUser?.phone || "+91 98402 11990",
+      customerEmail: currentUser?.email || "guest@bakesphere.com",
+      deliveryAddress: `Flat 4B, Heritage Enclave, T. Nagar`,
+      deliveryCity: deliveryCity || "Chennai",
+      deliveryPincode: deliveryPincode || "600017",
+      deliverySlot: deliverySlot === "express-2hr" ? "Express within 2 Hours" : "Standard Scheduled Slot",
+      items: cart.map((item) => ({
+        productId: item.id,
+        name: item.name,
+        weight: item.selectedWeight || item.weight || "Regular",
+        quantity: item.quantity,
+        unitPrice: item.sellingPrice || item.price,
+        lineTotal: (item.sellingPrice || item.price) * item.quantity
+      })),
+      subtotal: parseFloat(subtotal.toFixed(2)),
+      discountAmount: parseFloat(discountAmount.toFixed(2)),
+      couponCode: appliedCoupon?.code || null,
+      deliveryFee,
+      taxableAmount: parseFloat(taxable.toFixed(2)),
+      cgst,
+      sgst,
+      totalGst,
+      grandTotal,
+      paymentMethod: "UPI / Instant Pay",
+      paymentStatus: "PAID / SUCCESS",
+      transactionRef: `TXN-UPI-${Date.now().toString().slice(-8)}`,
+      status: "confirmed",
+      orderDate: now.toLocaleDateString("en-IN"),
+      orderTime: now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
+      createdAt: now.toISOString()
+    };
+
+    // Save to local invoices list
+    try {
+      const savedInvoices = JSON.parse(localStorage.getItem("bakesphere_invoices") || "[]");
+      localStorage.setItem("bakesphere_invoices", JSON.stringify([invoiceData, ...savedInvoices]));
+    } catch (e) {
+      console.error(e);
+    }
+
+    // Inform backend asynchronously
+    fetch("http://localhost:5000/api/pos/online-order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(invoiceData)
+    }).catch(() => {
+      // offline safe
+    });
+
+    // Add to user notifications
+    addNotification({
+      title: "Order Placed & Invoiced! 🧾",
+      message: `Tax Invoice #${invoiceNumber} for ₹${grandTotal} generated.`,
+      type: "bill",
+      invoice: invoiceData
+    });
+
     setPlacedOrderId(newOrderId);
+    setLastInvoice(invoiceData);
     setOrderPlaced(true);
     onClearCart();
+
+    // Immediately pop open the Tax Invoice Bill Modal!
+    openBill(invoiceData);
   };
 
   return (
@@ -106,9 +193,9 @@ export const CartDrawer = ({
         {orderPlaced ? (
           <div className="bk-order-success-card">
             <div className="bk-success-icon">🎉</div>
-            <h3 className="bk-success-title">Order Confirmed!</h3>
+            <h3 className="bk-success-title">Order Confirmed & Billed!</h3>
             <p className="bk-success-subtitle">
-              Thank you for ordering with BakeSphere. Your freshly baked delights are now in preparation at our {deliveryCity || "Chennai"} patisserie!
+              Thank you for ordering with BakeSphere. Your tax invoice has been generated and notified in your notifications.
             </p>
             <div className="bk-success-order-box">
               <span>Order Tracking ID:</span>
@@ -118,15 +205,51 @@ export const CartDrawer = ({
               <span>⚡ Slot: {deliverySlot === "express-2hr" ? "Express within 2 Hours" : "Selected Slot"}</span>
               <span>📍 Delivering to: {deliveryCity || "Chennai"} - {deliveryPincode}</span>
             </div>
-            <button
-              className="bk-btn-continue-shopping"
-              onClick={() => {
-                setOrderPlaced(false);
-                onClose();
-              }}
-            >
-              Explore More Cakes 🍰
-            </button>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", marginTop: "1rem" }}>
+              {lastInvoice && (
+                <button
+                  type="button"
+                  className="bk-btn-checkout"
+                  style={{ width: "100%", justifyContent: "center" }}
+                  onClick={() => openBill(lastInvoice)}
+                >
+                  <span>🧾</span>
+                  <span>View Tax Invoice & Bill</span>
+                </button>
+              )}
+
+              {lastInvoice && onTrackOrder && (
+                <button
+                  type="button"
+                  className="bk-btn-checkout"
+                  style={{
+                    width: "100%",
+                    justifyContent: "center",
+                    background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
+                    boxShadow: "0 4px 14px rgba(5, 150, 105, 0.35)"
+                  }}
+                  onClick={() => {
+                    onTrackOrder(lastInvoice);
+                    onClose();
+                  }}
+                >
+                  <span>🛵</span>
+                  <span>Track Real-Time Order & Cold-Chain</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                className="bk-btn-continue-shopping"
+                onClick={() => {
+                  setOrderPlaced(false);
+                  onClose();
+                }}
+              >
+                Explore More Cakes 🍰
+              </button>
+            </div>
           </div>
         ) : (
           <div className="bk-drawer-body">

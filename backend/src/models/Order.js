@@ -10,11 +10,10 @@ const OrderItemSchema = new mongoose.Schema({
 }, { _id: false });
 
 const OrderSchema = new mongoose.Schema({
-  orderId: { type: String, required: true, unique: true },
+  orderId: { type: String, required: true, unique: true, index: true },
   invoiceNumber: { type: String },
   type: { 
     type: String, 
-    enum: ["pos", "online_delivery", "custom_cake", "dine_in", "takeaway"], 
     default: "pos" 
   },
   branchId: { type: String, default: "BR-01" },
@@ -23,22 +22,27 @@ const OrderSchema = new mongoose.Schema({
   deliveryAddress: { type: String },
   deliveryDate: { type: String },
   deliveryTimeSlot: { type: String },
+  deliveryPartner: { type: String },
+  estimatedDeliveryTime: { type: String },
+  assignedChef: { type: String },
   items: [OrderItemSchema],
   subtotal: { type: Number, required: true },
   discountAmount: { type: Number, default: 0 },
+  loyaltyPointsUsed: { type: Number, default: 0 },
   taxableAmount: { type: Number },
   cgstAmount: { type: Number, default: 0 },
   sgstAmount: { type: Number, default: 0 },
   gstAmount: { type: Number, default: 0 },
+  totalGst: { type: Number, default: 0 },
   deliveryFee: { type: Number, default: 0 },
   finalTotal: { type: Number, required: true },
   paymentMethod: { type: String, default: "Cash" },
   paymentReference: { type: String },
   splitDetails: { type: mongoose.Schema.Types.Mixed },
   customDetails: { type: mongoose.Schema.Types.Mixed },
+  cashierName: { type: String },
   status: { 
     type: String, 
-    enum: ["pending", "confirmed", "in_production", "completed", "out_for_delivery", "cancelled"], 
     default: "completed" 
   },
   createdAt: { type: Date, default: Date.now }

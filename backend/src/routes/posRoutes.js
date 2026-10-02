@@ -53,6 +53,134 @@ router.post("/verify-coupon", (req, res) => {
   });
 });
 
+// Get all orders & billing invoices (MongoDB Atlas or in-memory bakeryOrders fallback)
+router.get("/orders", async (req, res) => {
+  try {
+    if (mongoose.connection.readyState === 1) {
+      const dbOrders = await Order.find().sort({ createdAt: -1 }).limit(100);
+      if (dbOrders && dbOrders.length > 0) {
+        return res.json(dbOrders);
+      }
+    }
+    res.json(bakeryOrders);
+  } catch (err) {
+    res.json(bakeryOrders);
+  }
+});
+
+// Online Storefront Checkout & Tax Invoice Generator
+router.post("/online-order", async (req, res) => {
+  try {
+    const {
+      items,
+      customerName,
+      customerPhone,
+      customerEmail,
+      deliveryAddress,
+      deliveryCity,
+      deliveryPincode,
+      deliverySlot,
+      couponCode,
+      paymentMethod
+    } = req.body;
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: "Cart cannot be empty" });
+    }
+
+    let subtotal = 0;
+    const processedItems = items.map((item) => {
+      const price = Number(item.sellingPrice || item.price || 120);
+      const qty = parseInt(item.quantity, 10) || 1;
+      const lineTotal = price * qty;
+      subtotal += lineTotal;
+      return {
+        productId: item.id || item.productId || 1,
+        name: item.name || "Artisan Pastry",
+        weight: item.selectedWeight || item.weight || "Regular",
+        quantity: qty,
+        unitPrice: price,
+        lineTotal
+      };
+    });
+
+    let discountAmount = 0;
+    if (couponCode) {
+      const code = (couponCode || "").toUpperCase().trim();
+      if (code === "SWEET15") {
+        discountAmount = parseFloat((subtotal * 0.15).toFixed(2));
+      } else if (code === "BAKE50" && subtotal >= 400) {
+        discountAmount = 50;
+      }
+    }
+
+    const deliveryFee = subtotal >= 500 ? 0 : 50;
+    const taxableAmount = Math.max(0, subtotal - discountAmount);
+    const cgst = parseFloat((taxableAmount * 0.025).toFixed(2));
+    const sgst = parseFloat((taxableAmount * 0.025).toFixed(2));
+    const totalGst = parseFloat((cgst + sgst).toFixed(2));
+    const grandTotal = parseFloat((taxableAmount + totalGst + deliveryFee).toFixed(2));
+
+    const orderId = `BS-${Date.now().toString().slice(-6)}`;
+    const invoiceNumber = `INV-${orderId}`;
+    const now = new Date();
+
+    const invoice = {
+      orderId,
+      invoiceNumber,
+      type: "online_delivery",
+      storeName: "BAKESPHERE PATISSERIE",
+      tagline: "Online Patisserie, Artisanal Viennoiserie & Custom Cakes",
+      gstin: "33AABCB1234E1Z0",
+      fssaiLicense: "12423008000451",
+      branchAddress: "42 Venkatnarayana Rd, T. Nagar, Chennai 600017",
+      phone: "+91 44 2434 8890",
+      customerName: customerName || "Guest Gourmet",
+      customerPhone: customerPhone || "+91 98402 11990",
+      customerEmail: customerEmail || "guest@bakesphere.com",
+      deliveryAddress: deliveryAddress || "Heritage Apartments, T. Nagar",
+      deliveryCity: deliveryCity || "Chennai",
+      deliveryPincode: deliveryPincode || "600017",
+      deliverySlot: deliverySlot || "Express within 2 Hours",
+      items: processedItems,
+      subtotal: parseFloat(subtotal.toFixed(2)),
+      discountAmount,
+      couponCode: couponCode || null,
+      deliveryFee,
+      taxableAmount,
+      cgst,
+      sgst,
+      totalGst,
+      grandTotal,
+      paymentMethod: paymentMethod || "UPI / Instant Pay",
+      paymentStatus: "PAID / SUCCESS",
+      transactionRef: `TXN-UPI-${Date.now().toString().slice(-8)}`,
+      status: "confirmed",
+      orderDate: now.toLocaleDateString("en-IN"),
+      orderTime: now.toLocaleTimeString("en-IN"),
+      createdAt: now.toISOString(),
+      qrPayload: `https://bakesphere.in/verify-invoice/${invoiceNumber}`,
+      footerNote: "Thank you for choosing BakeSphere! Freshly baked with 84% Normandy butter daily. 🥐"
+    };
+
+    bakeryOrders.unshift(invoice);
+
+    if (mongoose.connection.readyState === 1) {
+      Order.create(invoice).catch((err) => {
+        console.error("🍃 [MongoDB Atlas] Error saving online order:", err.message);
+      });
+    }
+
+    res.status(201).json({
+      success: true,
+      message: "Online order placed and tax invoice generated",
+      invoice
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POS Checkout & Thermal Receipt Generator (Non-CRUD Resume Feature)
 router.post("/checkout", authenticateToken, (req, res) => {
   const {
