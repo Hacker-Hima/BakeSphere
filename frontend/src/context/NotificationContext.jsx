@@ -44,26 +44,80 @@ export const NotificationProvider = ({ children }) => {
     }
   }, [notifications]);
 
-  // Add Notification
-  const addNotification = ({ title, message, type = "order", invoice = null }) => {
-    const newNotif = {
-      id: Date.now(),
-      title,
-      message,
-      time: "Just now",
-      read: false,
-      type,
-      invoice
-    };
+  // Synthesized notification chime (zero external audio files)
+  const playChime = () => {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15); // A5
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.4);
+    } catch {
+      // AudioContext might be restricted before first click, safe to ignore
+    }
+  };
 
-    setNotifications((prev) => [newNotif, ...prev]);
+  // Add Notification with deduplication
+  const addNotification = ({
+    title,
+    message,
+    type = "order",
+    invoice = null,
+    actionUrl = null,
+    targetTab = null
+  }) => {
+    let wasAdded = false;
+    setNotifications((prev) => {
+      // Check if identical notification was created in last 4 seconds
+      const isDuplicate = prev.some(
+        (n) => n.title === title && n.message === message && Date.now() - (n.createdAt || 0) < 4000
+      );
+      if (isDuplicate) return prev;
+
+      wasAdded = true;
+      const newNotif = {
+        id: Date.now() + Math.random(),
+        createdAt: Date.now(),
+        title,
+        message,
+        time: "Just now",
+        read: false,
+        type, // "order" | "bill" | "clearance" | "quote" | "stock" | "promo" | "info"
+        invoice,
+        actionUrl,
+        targetTab
+      };
+
+      return [newNotif, ...prev.slice(0, 49)];
+    });
+
+    if (wasAdded) {
+      playChime();
+    }
 
     // Show floating toast
     setToast({
       title,
       message,
-      icon: type === "bill" || type === "order" ? "🧾" : "🔔",
-      invoice
+      icon:
+        type === "clearance"
+          ? "🔥"
+          : type === "bill" || type === "order"
+          ? "🧾"
+          : type === "stock"
+          ? "⏱️"
+          : type === "quote"
+          ? "📋"
+          : "🔔",
+      invoice,
+      targetTab
     });
 
     // Auto-dismiss toast after 6 seconds
@@ -73,6 +127,17 @@ export const NotificationProvider = ({ children }) => {
 
     return newNotif;
   };
+
+  // Broadcast customer near-expiry clearance deal alert
+  const broadcastClearanceAlert = ({ branchName, productName, discount, hoursRemaining, price }) => {
+    return addNotification({
+      title: `🔥 Night Market Deal: ${discount}% OFF!`,
+      message: `${productName} at ${branchName} has ${hoursRemaining}h fresh shelf-life. Grab it now for only ₹${price}!`,
+      type: "clearance",
+      targetTab: "storefront"
+    });
+  };
+
 
   const markAsRead = (id) => {
     setNotifications((prev) =>
@@ -108,6 +173,7 @@ export const NotificationProvider = ({ children }) => {
         notifications,
         unreadCount,
         addNotification,
+        broadcastClearanceAlert,
         markAsRead,
         markAllAsRead,
         clearNotifications,
@@ -118,6 +184,7 @@ export const NotificationProvider = ({ children }) => {
         dismissToast
       }}
     >
+
       {children}
     </NotificationContext.Provider>
   );

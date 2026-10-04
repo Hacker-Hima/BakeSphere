@@ -1,0 +1,60 @@
+/**
+ * BakeSphere In-Memory Custom Cake Design Requests Store
+ */
+
+export const customCakeRequests = [
+  {
+    id: "CCR-901",
+    customerName: "Aadhya Ramesh",
+    customerPhone: "+91 98842 12345",
+    customerEmail: "aadhya@example.com",
+    branchId: "BR-01",
+    branchName: "Flagship T. Nagar Hub",
+    theme: "Avengers Endgame Battle Diorama",
+    category: "Superhero & Comics",
+    tiers: 2,
+    weightKg: 4.0,
+    baseSponge: "Belgian Dark Chocolate",
+    filling: "Belgian Dark Ganache",
+    shape: "Round",
+    colorPalette: ["#dc2626", "#eab308", "#1e3a8a"],
+    cakeMessage: "Happy 10th Birthday Aarav! Avengers Assemble! 🦸‍♂️",
+    photoCakeUrl: "https://images.unsplash.com/photo-1535141192574-5d4897c13136?w=600&auto=format&fit=crop&q=80",
+    photoCropShape: "Round",
+    specialInstructions: "Please include Iron Man arc reactor glow effect and fondant Mjolnir on top tier.",
+    deliveryDate: "2026-10-10",
+    deliveryTimeSlot: "04:00 PM – 06:00 PM",
+    deliveryAddress: "Villa 14, Lotus Enclave, Anna Nagar, Chennai",
+    status: "quoted",
+    estimatedQuote: 4600,
+    assignedChef: "Chef Pierre Bouchard",
+    createdAt: "2026-10-02T10:15:00.000Z"
+  },
+  {
+    id: "CCR-902",
+    customerName: "Vikram & Sneha",
+    customerPhone: "+91 98401 98765",
+    customerEmail: "sneha.vikram@gmail.com",
+    branchId: "BR-02",
+    branchName: "Adyar Artisan Studio",
+    theme: "Pastel Rose Cascade & 24K Gold Leaf",
+    category: "Anniversary & Romance",
+    tiers: 3,
+    weightKg: 5.0,
+    baseSponge: "Crimson Red Velvet",
+    filling: "White Truffle & Raspberry",
+    shape: "Round",
+    colorPalette: ["#fbcfe8", "#d97706", "#ffffff"],
+    cakeMessage: "Silver Jubliee 25 Years of Togetherness 🥂",
+    photoCakeUrl: "https://images.unsplash.com/photo-1588195538326-c5b1e9f80a1b?w=600&auto=format&fit=crop&q=80",
+    photoCropShape: "Heart",
+    specialInstructions: "Edible sugar rose petals draped in spiral, eggless sponge mandatory.",
+    deliveryDate: "2026-10-15",
+    deliveryTimeSlot: "06:00 PM – 08:00 PM",
+    deliveryAddress: "Beach Road, Besant Nagar, Chennai",
+    status: "approved",
+    estimatedQuote: 6800,
+    assignedChef: "Chef Ananya Rao",
+    createdAt: "2026-10-03T08:30:00.000Z"
+  }
+];

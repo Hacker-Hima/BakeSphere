@@ -6,14 +6,15 @@ const API_BASE = "http://localhost:5000/api";
 
 // Role-Based Module Access Mapping
 export const ROLE_PERMISSIONS = {
-  super_admin: ["shop", "dashboard", "pos", "billing", "custom-cake", "production", "inventory", "ai-forecast", "branches", "login"],
-  bakery_owner: ["shop", "dashboard", "pos", "billing", "production", "inventory", "ai-forecast", "branches", "login"],
-  manager: ["shop", "dashboard", "pos", "billing", "production", "inventory", "branches", "login"],
-  head_baker: ["shop", "billing", "production", "inventory", "custom-cake", "login"],
-  chef: ["shop", "billing", "production", "inventory", "custom-cake", "login"],
-  cashier: ["pos", "billing", "shop", "custom-cake", "login"],
-  customer: ["shop", "billing", "custom-cake", "login"]
+  super_admin: ["shop", "dashboard", "pos", "billing", "custom-cake", "bulk-order", "feedback", "production", "inventory", "ai-forecast", "branches", "login"],
+  bakery_owner: ["shop", "dashboard", "pos", "billing", "custom-cake", "bulk-order", "feedback", "production", "inventory", "ai-forecast", "branches", "login"],
+  manager: ["shop", "dashboard", "pos", "billing", "custom-cake", "bulk-order", "feedback", "production", "inventory", "branches", "login"],
+  head_baker: ["shop", "billing", "production", "inventory", "custom-cake", "bulk-order", "feedback", "login"],
+  chef: ["shop", "billing", "production", "inventory", "custom-cake", "bulk-order", "feedback", "login"],
+  cashier: ["pos", "billing", "shop", "custom-cake", "bulk-order", "feedback", "login"],
+  customer: ["shop", "billing", "custom-cake", "bulk-order", "feedback", "login"]
 };
+
 
 export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(() => {
@@ -262,6 +263,50 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Active branch selection (Admin can toggle between branches; Manager/Staff locked to assigned branch)
+  const [activeBranchId, setActiveBranchId] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem("bakesphere_active_branch");
+      if (saved) return saved;
+    } catch {}
+    return "BR-01";
+  });
+
+  const [activeBranchName, setActiveBranchName] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem("bakesphere_active_branch_name");
+      if (saved) return saved;
+    } catch {}
+    return "Heritage Main (T. Nagar)";
+  });
+
+  // Keep branch in sync with logged-in user profile
+  useEffect(() => {
+    if (currentUser) {
+      const isSuper = ["super_admin", "bakery_owner"].includes(currentUser.role);
+      if (!isSuper && currentUser.branchId) {
+        // Enforce assigned branch for managers & chefs
+        setActiveBranchId(currentUser.branchId);
+        if (currentUser.branchName) setActiveBranchName(currentUser.branchName);
+      }
+    }
+  }, [currentUser]);
+
+  const switchBranch = (branchId, branchName) => {
+    const isSuper = currentUser && ["super_admin", "bakery_owner", "customer"].includes(currentUser.role);
+    if (!isSuper && currentUser?.branchId && currentUser.branchId !== branchId) {
+      console.warn("Unauthorized attempt to switch branch outside assigned scope.");
+      return false;
+    }
+    setActiveBranchId(branchId);
+    if (branchName) setActiveBranchName(branchName);
+    try {
+      sessionStorage.setItem("bakesphere_active_branch", branchId);
+      if (branchName) sessionStorage.setItem("bakesphere_active_branch_name", branchName);
+    } catch {}
+    return true;
+  };
+
   const role = currentUser ? currentUser.role : "unauthenticated";
   const allowedTabs = currentUser ? (ROLE_PERMISSIONS[currentUser.role] || ["shop"]) : [];
   const hasPermission = (tabId) => Boolean(currentUser && allowedTabs.includes(tabId));
@@ -297,7 +342,10 @@ export const AuthProvider = ({ children }) => {
         googleLogin,
         switchDemoRole,
         loginAsGuest,
-        logout
+        logout,
+        activeBranchId,
+        activeBranchName,
+        switchBranch
       }}
     >
       {children}

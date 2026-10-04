@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { bakingoProducts, BAKINGO_CATEGORY_BUBBLES } from "../../data/bakingoProducts.js";
 import { handleImageError, getSafeImageUrl } from "../../utils/imageFallback.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
+import { useAuth } from "../../context/AuthContext.jsx";
 
 export const BakingoStorefront = ({
   onOpenQuickView,
@@ -12,14 +13,37 @@ export const BakingoStorefront = ({
   onNavigateTab,
   searchQuery,
   setSearchQuery,
-  deliveryCity
+  deliveryCity,
+  onOpenBranchFinder,
+  onOpenBranchContact
 }) => {
   const { t } = useLanguage();
+  const { activeBranchId, activeBranchName } = useAuth();
+  const [activeBranch, setActiveBranch] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchBranch = async () => {
+      try {
+        const res = await fetch(`http://localhost:5000/api/branches/${activeBranchId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (mounted) setActiveBranch(data);
+        }
+      } catch (e) {
+        console.warn("Branch fetch error:", e);
+      }
+    };
+    if (activeBranchId) fetchBranch();
+    return () => { mounted = false; };
+  }, [activeBranchId]);
   const [activeCategory, setActiveCategory] = useState("all");
   const [egglessOnly, setEgglessOnly] = useState(false);
   const [selectedOccasion, setSelectedOccasion] = useState("all");
   const [selectedFlavour, setSelectedFlavour] = useState("all");
   const [sortBy, setSortBy] = useState("popularity");
+  const [viewMode, setViewMode] = useState("grid");
+  const [specialFilter, setSpecialFilter] = useState("all");
   const [wishlist, setWishlist] = useState({});
   const [wishlistFilter, setWishlistFilter] = useState(false);
   const [heroSlide, setHeroSlide] = useState(0);
@@ -81,9 +105,35 @@ export const BakingoStorefront = ({
   // Selected weights per product { [productId]: selectedWeight }
   const [cardWeights, setCardWeights] = useState({});
 
+  // Dynamic Night Market & Flash Clearance items
+  const [clearanceItems, setClearanceItems] = useState([]);
+
+  useEffect(() => {
+    const fetchClearance = async () => {
+      try {
+        const res = await fetch(`http://localhost:5000/api/inventory/clearance-items?branchId=${activeBranchId || "BR-01"}`);
+        const data = await res.json();
+        if (res.ok) {
+          setClearanceItems(data.items || []);
+        }
+      } catch (e) {
+        console.warn("Could not fetch clearance items", e);
+      }
+    };
+    fetchClearance();
+  }, [activeBranchId]);
+
+  const getClearanceItemImage = (c) => {
+    const match = bakingoProducts.find(
+      (p) => p.id === c.productId || p.name?.toLowerCase().includes(c.productName?.toLowerCase())
+    );
+    return getSafeImageUrl(c.imageUrl || match?.image || "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&auto=format&fit=crop&q=80");
+  };
+
   // Hero carousel slides
   const heroSlides = [
     {
+
       id: 1,
       title: t("heroTitle1"),
       subtitle: t("heroSubtitle1"),
@@ -178,7 +228,18 @@ export const BakingoStorefront = ({
           if (item.category.toLowerCase() !== activeCategory.toLowerCase()) return false;
         }
 
-        // Eggless filter
+        // Special tabs filter (Bestsellers, Offers, New Arrivals, Bulk Eligible)
+        if (specialFilter === "bestsellers") {
+          if (!item.tags?.includes("Bestseller") && item.rating < 4.9) return false;
+        } else if (specialFilter === "offers") {
+          if (!item.discountPercent || item.discountPercent < 18) return false;
+        } else if (specialFilter === "new") {
+          if (item.id < 60) return false;
+        } else if (specialFilter === "bulk") {
+          if (!item.suitableForBulk) return false;
+        }
+
+        // Eggless / Veg filter
         if (egglessOnly && !item.isEggless) {
           return false;
         }
@@ -198,11 +259,16 @@ export const BakingoStorefront = ({
       .sort((a, b) => {
         if (sortBy === "price-low") return a.sellingPrice - b.sellingPrice;
         if (sortBy === "price-high") return b.sellingPrice - a.sellingPrice;
-        if (sortBy === "rating") return b.rating - a.rating;
+        if (sortBy === "rating") return (b.rating || 0) - (a.rating || 0);
+        if (sortBy === "prep-fast") {
+          const prepA = parseInt(a.prepTime, 10) || 999;
+          const prepB = parseInt(b.prepTime, 10) || 999;
+          return prepA - prepB;
+        }
         // Default: popularity / bestseller
         return (b.reviewsCount || 0) - (a.reviewsCount || 0);
       });
-  }, [activeCategory, egglessOnly, selectedOccasion, selectedFlavour, sortBy, searchQuery, wishlistFilter, wishlist]);
+  }, [activeCategory, specialFilter, egglessOnly, selectedOccasion, selectedFlavour, sortBy, searchQuery, wishlistFilter, wishlist]);
 
   return (
     <div className="bk-storefront">
@@ -319,8 +385,285 @@ export const BakingoStorefront = ({
         </div>
       </section>
 
+      {/* ═══════════════ LIVE BRANCH & CUSTOMER HOTLINE BAR ═══════════════ */}
+      <section className="bk-branch-hotline-bar" style={{
+        maxWidth: "1380px",
+        margin: "1rem auto 1.5rem auto",
+        padding: "0 1.25rem"
+      }}>
+        <div className="glass-panel" style={{
+          padding: "1rem 1.4rem",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "1rem",
+          border: "1px solid rgba(245, 158, 11, 0.25)",
+          background: "linear-gradient(135deg, rgba(245, 158, 11, 0.04) 0%, rgba(20, 20, 28, 0.7) 100%)"
+        }}>
+          {/* Branch Details */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.9rem" }}>
+            <div style={{
+              width: "44px",
+              height: "44px",
+              borderRadius: "12px",
+              background: "rgba(245, 158, 11, 0.15)",
+              border: "1px solid rgba(245, 158, 11, 0.3)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "1.4rem"
+            }}>
+              🏪
+            </div>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                  Selected Bakery Hub:
+                </span>
+                <strong style={{ fontSize: "1.05rem", color: "var(--text-primary)" }}>
+                  {activeBranch?.name || activeBranchName || "Heritage Main Bakery (T. Nagar)"}
+                </strong>
+                <span className="badge badge-emerald" style={{ fontSize: "0.68rem" }}>
+                  ● Open Now
+                </span>
+              </div>
+              <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginTop: "0.15rem" }}>
+                📍 {activeBranch?.locality || "T. Nagar, Chennai"} •{" "}
+                <span style={{ color: "var(--gold-400)" }}>
+                  {activeBranch?.workingHours?.display || "06:00 AM – 10:30 PM"}
+                </span>{" "}
+                • {activeBranch?.specialty || "Fresh Artisan Baking"}
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Contact & Switch Buttons */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
+            {/* Call Now */}
+            <a
+              href={`tel:${activeBranch?.contact?.phone || "+914424348890"}`}
+              style={{
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.35rem",
+                padding: "0.45rem 0.85rem",
+                borderRadius: "8px",
+                fontSize: "0.78rem",
+                fontWeight: 600,
+                background: "rgba(56, 189, 248, 0.15)",
+                color: "#38bdf8",
+                border: "1px solid rgba(56, 189, 248, 0.3)"
+              }}
+              title="Call Bakery Branch Directly"
+            >
+              <span>📞</span> Call
+            </a>
+
+            {/* WhatsApp */}
+            <a
+              href={`https://wa.me/${(activeBranch?.contact?.whatsapp || "919444243488").replace(/\D/g, "")}?text=${encodeURIComponent("Hello BakeSphere! I would like to inquire about bakery items & orders.")}`}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.35rem",
+                padding: "0.45rem 0.85rem",
+                borderRadius: "8px",
+                fontSize: "0.78rem",
+                fontWeight: 600,
+                background: "rgba(37, 211, 102, 0.15)",
+                color: "#34d399",
+                border: "1px solid rgba(37, 211, 102, 0.3)"
+              }}
+              title="Chat on WhatsApp"
+            >
+              <span>💬</span> WhatsApp
+            </a>
+
+            {/* Email */}
+            <a
+              href={`mailto:${activeBranch?.contact?.email || "contact@bakesphere.com"}?subject=Bakery Order Inquiry`}
+              style={{
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.35rem",
+                padding: "0.45rem 0.85rem",
+                borderRadius: "8px",
+                fontSize: "0.78rem",
+                fontWeight: 600,
+                background: "rgba(255, 255, 255, 0.05)",
+                color: "var(--text-secondary)",
+                border: "1px solid rgba(255, 255, 255, 0.1)"
+              }}
+              title="Send an Email Inquiry"
+            >
+              <span>✉️</span> Email
+            </a>
+
+            {/* Directions */}
+            <a
+              href={`https://www.google.com/maps/dir/?api=1&destination=${activeBranch?.coordinates?.lat || 13.0418},${activeBranch?.coordinates?.lng || 80.2341}`}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.35rem",
+                padding: "0.45rem 0.85rem",
+                borderRadius: "8px",
+                fontSize: "0.78rem",
+                fontWeight: 600,
+                background: "rgba(255, 255, 255, 0.05)",
+                color: "var(--text-secondary)",
+                border: "1px solid rgba(255, 255, 255, 0.1)"
+              }}
+              title="Get Driving Directions in Google Maps"
+            >
+              <span>🗺️</span> Directions
+            </a>
+
+            {/* Change Branch / Map Locator */}
+            <button
+              onClick={onOpenBranchFinder}
+              className="bk-btn-hero-primary"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.35rem",
+                padding: "0.45rem 1rem",
+                fontSize: "0.78rem"
+              }}
+            >
+              <span>📍</span> Find on Map
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════ NIGHT MARKET & SMART CLEARANCE CAROUSEL ═══════════════ */}
+      {clearanceItems.length > 0 && (
+        <section
+          style={{
+            margin: "1.5rem auto 2.5rem",
+            maxWidth: "1380px",
+            padding: "0 1.25rem"
+          }}
+        >
+          <div
+            style={{
+              background: "var(--bg-card, #ffffff)",
+              border: "1px solid var(--border-color, #e2e8f0)",
+              borderRadius: "20px",
+              padding: "1.5rem 1.8rem",
+              boxShadow: "0 10px 30px rgba(0, 0, 0, 0.04)"
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.4rem", flexWrap: "wrap", gap: "0.8rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
+                <span style={{ fontSize: "1.6rem" }}>🌙</span>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "1.22rem", color: "var(--crimson-600, #c8102e)", fontWeight: 800, display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
+                    <span>Night Market & Fresh Clearance</span>
+                    <span style={{ fontSize: "0.75rem", background: "var(--gold-100, #fef3c7)", color: "#b45309", padding: "0.15rem 0.6rem", borderRadius: "999px", fontWeight: 700 }}>
+                      Save Up to 50%
+                    </span>
+                  </h3>
+                  <span style={{ fontSize: "0.82rem", color: "var(--text-secondary, #64748b)" }}>
+                    Zero-Waste Artisan Initiative • Perfectly fresh oven bakes expiring within 12 hours at {activeBranch?.name || "Heritage Main Bakery"}.
+                  </span>
+                </div>
+              </div>
+              <span className="badge badge-rose" style={{ animation: "pulse 2s infinite", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}>
+                ⚡ Limited Quantities
+              </span>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "1.2rem" }}>
+              {clearanceItems.slice(0, 4).map((c) => {
+                const itemImg = getClearanceItemImage(c);
+                return (
+                  <div
+                    key={c.batchId}
+                    style={{
+                      background: "var(--bg-surface, #f8fafc)",
+                      border: "1px solid var(--border-color, #e2e8f0)",
+                      borderRadius: "14px",
+                      overflow: "hidden",
+                      display: "flex",
+                      flexDirection: "column",
+                      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.03)",
+                      transition: "transform 0.2s, box-shadow 0.2s"
+                    }}
+                  >
+                    <div style={{ position: "relative", height: "140px", overflow: "hidden" }}>
+                      <img
+                        src={itemImg}
+                        alt={c.productName}
+                        onError={handleImageError}
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      />
+                      <div style={{ position: "absolute", top: "8px", left: "8px", background: "var(--crimson-600, #c8102e)", color: "#ffffff", fontSize: "0.72rem", fontWeight: 800, padding: "0.2rem 0.55rem", borderRadius: "6px", boxShadow: "0 2px 6px rgba(0,0,0,0.3)" }}>
+                        {c.discountApplied}% OFF
+                      </div>
+                      <div style={{ position: "absolute", top: "8px", right: "8px", background: "rgba(0,0,0,0.75)", color: "#f87171", fontSize: "0.7rem", fontWeight: 700, padding: "0.2rem 0.5rem", borderRadius: "6px", backdropFilter: "blur(4px)" }}>
+                        ⏳ {c.hoursRemaining}h left
+                      </div>
+                    </div>
+
+                    <div style={{ padding: "1rem", display: "flex", flexDirection: "column", flex: 1, justifyContent: "space-between" }}>
+                      <div>
+                        <h4 style={{ margin: "0 0 0.3rem", fontSize: "0.98rem", color: "var(--text-primary, #0f172a)", fontWeight: 700 }}>
+                          {c.productName}
+                        </h4>
+                        <p style={{ margin: "0 0 0.8rem", fontSize: "0.76rem", color: "var(--text-secondary, #64748b)" }}>
+                          Only {c.quantityRemaining} units remaining at this price!
+                        </p>
+                      </div>
+
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "0.75rem", borderTop: "1px solid var(--border-color, #e2e8f0)" }}>
+                        <div>
+                          <span style={{ textDecoration: "line-through", color: "var(--text-muted, #94a3b8)", fontSize: "0.8rem", marginRight: "0.4rem" }}>
+                            ₹{c.originalPrice}
+                          </span>
+                          <strong style={{ color: "var(--crimson-600, #c8102e)", fontSize: "1.15rem", fontWeight: 800 }}>
+                            ₹{c.discountedPrice}
+                          </strong>
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            onAddToCart({
+                              id: c.productId,
+                              name: `${c.productName} (Clearance Deal)`,
+                              price: c.discountedPrice,
+                              weight: "Regular Pack"
+                            });
+                            showToast(`Added ${c.productName} at ${c.discountApplied}% OFF! 🌙`, "🛒");
+                          }}
+                          className="bk-btn-card-add"
+                          style={{ padding: "0.45rem 1rem", fontSize: "0.8rem", fontWeight: 700, borderRadius: "8px" }}
+                        >
+                          + Grab Deal
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* ═══════════════ VISUAL CATEGORY BUBBLES ═══════════════ */}
       <section className="bk-category-section">
+
         <div className="bk-section-heading-group">
           <h2 className="bk-main-section-title">{t("shopByCategory")}</h2>
           <p className="bk-main-section-subtitle">
@@ -459,7 +802,7 @@ export const BakingoStorefront = ({
             </div>
           </div>
 
-          {/* Right: Flavour & Sort */}
+          {/* Right: Flavour, Sort & View Mode */}
           <div className="bk-filter-group-right">
             {/* Flavour Dropdown */}
             <select
@@ -498,18 +841,100 @@ export const BakingoStorefront = ({
               <option value="price-low">💰 {t("sortPriceLowHigh")}</option>
               <option value="price-high">💎 {t("sortPriceHighLow")}</option>
               <option value="rating">⭐ {t("sortRating")}</option>
+              <option value="prep-fast">⚡ Fastest Prep Time</option>
             </select>
+
+            {/* View Mode Switcher */}
+            <div style={{ display: "flex", gap: "0.25rem", background: "rgba(255,255,255,0.06)", padding: "3px", borderRadius: "8px" }}>
+              <button
+                type="button"
+                onClick={() => setViewMode("grid")}
+                title="Grid Card View"
+                style={{
+                  padding: "0.35rem 0.65rem",
+                  borderRadius: "6px",
+                  border: "none",
+                  background: viewMode === "grid" ? "var(--gold-400)" : "transparent",
+                  color: viewMode === "grid" ? "#000" : "var(--text-secondary)",
+                  cursor: "pointer",
+                  fontWeight: 700,
+                  fontSize: "0.78rem"
+                }}
+              >
+                🔲 Grid
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("menu")}
+                title="Digital Menu Table View"
+                style={{
+                  padding: "0.35rem 0.65rem",
+                  borderRadius: "6px",
+                  border: "none",
+                  background: viewMode === "menu" ? "var(--gold-400)" : "transparent",
+                  color: viewMode === "menu" ? "#000" : "var(--text-secondary)",
+                  cursor: "pointer",
+                  fontWeight: 700,
+                  fontSize: "0.78rem"
+                }}
+              >
+                📜 Menu List
+              </button>
+            </div>
           </div>
+        </div>
+
+        {/* Quick Menu Highlight Tags Bar */}
+        <div style={{
+          display: "flex",
+          gap: "0.5rem",
+          flexWrap: "wrap",
+          padding: "0.6rem 0",
+          borderTop: "1px solid rgba(255,255,255,0.05)",
+          alignItems: "center"
+        }}>
+          <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Quick Filter:</span>
+          {[
+            { id: "all", label: "All Items" },
+            { id: "bestsellers", label: "⭐ Bestsellers" },
+            { id: "offers", label: "🏷️ Offers & Deals (18%+ OFF)" },
+            { id: "new", label: "✨ New Creations" },
+            { id: "bulk", label: "📦 Bulk Order Suitable" }
+          ].map((tag) => (
+            <button
+              key={tag.id}
+              type="button"
+              onClick={() => {
+                setSpecialFilter(tag.id);
+                scrollToCatalog();
+              }}
+              style={{
+                padding: "0.28rem 0.7rem",
+                borderRadius: "16px",
+                fontSize: "0.74rem",
+                cursor: "pointer",
+                background: specialFilter === tag.id ? "rgba(245, 158, 11, 0.2)" : "rgba(255,255,255,0.04)",
+                color: specialFilter === tag.id ? "var(--gold-400)" : "var(--text-secondary)",
+                border: specialFilter === tag.id ? "1px solid var(--gold-400)" : "1px solid rgba(255,255,255,0.08)",
+                fontWeight: specialFilter === tag.id ? 700 : 500
+              }}
+            >
+              {tag.label}
+            </button>
+          ))}
         </div>
 
         {/* Results Counter & Active Filters Tag */}
         <div className="bk-results-status-bar">
-          <span>Showing <strong>{filteredProducts.length}</strong> delicious bakery items</span>
-          {(activeCategory !== "all" || egglessOnly || selectedOccasion !== "all" || selectedFlavour !== "all" || searchQuery) && (
+          <span>Showing <strong>{filteredProducts.length}</strong> items in <strong>{activeCategory === "all" ? "Complete Digital Menu" : activeCategory}</strong></span>
+          {(activeCategory !== "all" || specialFilter !== "all" || egglessOnly || selectedOccasion !== "all" || selectedFlavour !== "all" || searchQuery) && (
             <button
               type="button"
               className="bk-btn-reset-filters"
-              onClick={handleResetAllFilters}
+              onClick={() => {
+                setSpecialFilter("all");
+                handleResetAllFilters();
+              }}
             >
               ✕ Reset All Filters
             </button>
@@ -531,7 +956,7 @@ export const BakingoStorefront = ({
               {t("allBakeryItems")}
             </button>
           </div>
-        ) : (
+        ) : viewMode === "grid" ? (
           <div className="bk-product-grid">
             {filteredProducts.map((product) => {
               // Current selected weight for this card
@@ -612,9 +1037,51 @@ export const BakingoStorefront = ({
                     <h3
                       className="bk-card-title"
                       onClick={() => onOpenQuickView(product)}
+                      style={{ cursor: "pointer", marginBottom: "0.2rem" }}
                     >
                       {product.name}
                     </h3>
+
+                    {/* Category & Prep Time Badges */}
+                    <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", marginBottom: "0.4rem" }}>
+                      <span style={{ fontSize: "0.68rem", background: "rgba(255,255,255,0.06)", padding: "0.15rem 0.45rem", borderRadius: "4px", color: "var(--text-secondary)" }}>
+                        {product.category}
+                      </span>
+                      <span style={{ fontSize: "0.68rem", background: "rgba(56, 189, 248, 0.1)", padding: "0.15rem 0.45rem", borderRadius: "4px", color: "#38bdf8" }}>
+                        ⏱️ {product.prepTime || "30 mins"}
+                      </span>
+                      {product.suitableForBulk && (
+                        <span style={{ fontSize: "0.68rem", background: "rgba(16, 185, 129, 0.12)", padding: "0.15rem 0.45rem", borderRadius: "4px", color: "#34d399", fontWeight: 600 }}>
+                          📦 Bulk Ready
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Description snippet */}
+                    <p style={{
+                      fontSize: "0.74rem",
+                      color: "var(--text-muted)",
+                      margin: "0 0 0.5rem 0",
+                      lineHeight: 1.35,
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden"
+                    }}>
+                      {product.description}
+                    </p>
+
+                    {/* Availability Status */}
+                    <div style={{ fontSize: "0.7rem", marginBottom: "0.5rem" }}>
+                      {product.availableQuantity && product.availableQuantity <= 5 ? (
+                        <span style={{ color: "#fb7185", fontWeight: 600 }}>⚠️ Only {product.availableQuantity} Left Today</span>
+                      ) : (
+                        <span style={{ color: "#34d399", fontWeight: 600 }}>🟢 In Stock ({product.availableQuantity || 12} Fresh Units)</span>
+                      )}
+                      {product.customizationAvailable && (
+                        <span style={{ marginLeft: "0.5rem", color: "var(--gold-400)" }}>• ✨ Photo/Text Ready</span>
+                      )}
+                    </div>
 
                     {/* Price Row */}
                     <div className="bk-card-price-row">
@@ -696,6 +1163,92 @@ export const BakingoStorefront = ({
               );
             })}
           </div>
+        ) : (
+          /* ═══════════════ DIGITAL MENU TABLE VIEW ═══════════════ */
+          <div className="glass-panel" style={{ padding: "1.2rem", overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.1)", color: "var(--text-muted)", textAlign: "left" }}>
+                  <th style={{ padding: "0.8rem" }}>Item & Flavor</th>
+                  <th style={{ padding: "0.8rem" }}>Category</th>
+                  <th style={{ padding: "0.8rem" }}>Prep Time</th>
+                  <th style={{ padding: "0.8rem" }}>Stock Status</th>
+                  <th style={{ padding: "0.8rem" }}>Portion</th>
+                  <th style={{ padding: "0.8rem" }}>Price</th>
+                  <th style={{ padding: "0.8rem", textAlign: "right" }}>Order</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredProducts.map((product) => {
+                  const currentWeight = cardWeights[product.id] || product.availableWeights?.[0] || product.weight;
+                  const multiplier = product.weightMultipliers?.[currentWeight] || 1;
+                  const cardPrice = Math.round(product.sellingPrice * multiplier);
+                  const cartItem = cart.find(
+                    (c) => c.id === product.id && (c.selectedWeight || c.weight) === currentWeight
+                  );
+                  const cartQuantity = cartItem ? cartItem.quantity : 0;
+
+                  return (
+                    <tr key={product.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                      <td style={{ padding: "0.8rem" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.8rem" }}>
+                          <img
+                            src={getSafeImageUrl(product.image)}
+                            alt={product.name}
+                            style={{ width: "48px", height: "48px", borderRadius: "8px", objectFit: "cover" }}
+                            onError={handleImageError}
+                          />
+                          <div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                              <span className={`bk-card-diet-tag ${product.isEggless ? "bk-diet-veg" : "bk-diet-nonveg"}`} style={{ position: "static", transform: "none" }}>
+                                <span className="bk-diet-circle" />
+                              </span>
+                              <strong style={{ color: "var(--text-primary)" }}>{product.name}</strong>
+                            </div>
+                            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", maxWidth: "340px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {product.description}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{ padding: "0.8rem", color: "var(--text-secondary)" }}>{product.category}</td>
+                      <td style={{ padding: "0.8rem", color: "#38bdf8" }}>⏱️ {product.prepTime || "30 mins"}</td>
+                      <td style={{ padding: "0.8rem" }}>
+                        <span className="badge badge-emerald" style={{ fontSize: "0.72rem" }}>
+                          ● Available ({product.availableQuantity || 12})
+                        </span>
+                      </td>
+                      <td style={{ padding: "0.8rem", color: "var(--text-muted)" }}>{currentWeight}</td>
+                      <td style={{ padding: "0.8rem" }}>
+                        <strong style={{ color: "var(--gold-400)", fontSize: "1rem" }}>₹{cardPrice}</strong>
+                      </td>
+                      <td style={{ padding: "0.8rem", textAlign: "right" }}>
+                        {cartQuantity > 0 ? (
+                          <span style={{ color: "var(--gold-400)", fontWeight: 700 }}>In Cart ({cartQuantity})</span>
+                        ) : (
+                          <button
+                            type="button"
+                            className="bk-btn-hero-primary"
+                            style={{ padding: "0.4rem 0.9rem", fontSize: "0.76rem" }}
+                            onClick={() => {
+                              onAddToCart({
+                                ...product,
+                                sellingPrice: cardPrice,
+                                selectedWeight: currentWeight
+                              });
+                              showToast(`Added "${product.name}" to cart!`, "🛒");
+                            }}
+                          >
+                            + Add
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
 
@@ -751,6 +1304,41 @@ export const BakingoStorefront = ({
               onError={handleImageError}
             />
           </div>
+        </div>
+      </section>
+
+      {/* ═══════════════ BULK ORDERING & CATERING BANNER ═══════════════ */}
+      <section className="bk-spotlight-section" style={{ marginTop: "1rem" }}>
+        <div className="glass-panel" style={{
+          padding: "2rem 2.5rem",
+          borderRadius: "16px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "1.5rem",
+          background: "linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(20, 20, 30, 0.9) 100%)",
+          border: "1.5px solid rgba(245, 158, 11, 0.35)"
+        }}>
+          <div style={{ maxWidth: "680px" }}>
+            <span className="badge badge-gold" style={{ marginBottom: "0.5rem" }}>
+              🎉 Large Gatherings & Wholesale Catering
+            </span>
+            <h3 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-primary)", marginBottom: "0.5rem" }}>
+              Planning a Wedding, Birthday Party, or Corporate Gala?
+            </h3>
+            <p style={{ fontSize: "0.88rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>
+              Get exclusive bulk pricing discounts (up to 20% OFF), customized edible branding, dedicated delivery vans, and tailored quotations from our master pastry chefs.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => onNavigateTab("bulk-order")}
+            className="bk-btn-hero-primary"
+            style={{ padding: "0.85rem 1.8rem", fontSize: "0.95rem", display: "flex", alignItems: "center", gap: "0.5rem" }}
+          >
+            <span>📦</span> Request Bulk Catering Quote →
+          </button>
         </div>
       </section>
 
@@ -911,9 +1499,10 @@ export const BakingoStorefront = ({
         <div className="bk-footer-bottom">
           <div className="bk-footer-bottom-inner">
             <div className="bk-footer-brand-summary">
-              <span className="bk-brand-icon">🥐</span>
-              <strong>BakeSphere</strong>
-              <span>© 2026 BakeSphere Online Patisserie & Delivery Pvt. Ltd. All rights reserved.</span>
+              <div className="bk-footer-logo-spotlight">
+                <img src="/logo.png" alt="BakeSphere Artisan Bakery" className="bk-footer-logo-img" />
+              </div>
+              <span className="bk-footer-copyright">© 2026 BakeSphere Online Patisserie & Delivery Pvt. Ltd. All rights reserved.</span>
             </div>
             <div className="bk-footer-bottom-badges">
               <span>UPI</span>

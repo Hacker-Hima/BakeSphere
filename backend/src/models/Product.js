@@ -36,6 +36,11 @@ const ProductSchema = new mongoose.Schema({
   badge: { type: String },
   image: { type: String },
   tags: [{ type: String }],
+  suitableForBulk: { type: Boolean, default: false },
+  bulkMinQty: { type: Number, default: 10 },
+  isVegetarian: { type: Boolean, default: true },
+  prepTime: { type: String, default: "30 mins" },
+  customizationAvailable: { type: Boolean, default: false },
   activeMarkdown: {
     discountPercent: { type: Number, default: 0 },
     reason: { type: String },

@@ -68,6 +68,26 @@ export const OrderHistoryModal = ({ isOpen, onClose, onTrackOrder, onReorder }) 
             { name: "Lotus Biscoff Cheesecake Jar", weight: "200 ml", quantity: 2, unitPrice: 199, lineTotal: 398 },
             { name: "Filter Coffee Tiramisu Cup", weight: "Regular", quantity: 1, unitPrice: 169, lineTotal: 169 }
           ]
+        },
+        {
+          orderId: "BS-BLK-89601",
+          invoiceNumber: "INV-BLK-89601",
+          type: "bulk_order",
+          orderDate: "03/10/2026",
+          orderTime: "01:15 PM",
+          grandTotal: 8450.0,
+          status: "Confirmed & Invoiced",
+          deliverySlot: "Special Event Logistics",
+          branchName: "Heritage Main Bakery (T. Nagar)",
+          bulkDetails: {
+            eventType: "Corporate Gala Celebration",
+            headCount: 65,
+            deliveryOption: "Catering Setup & Service"
+          },
+          items: [
+            { name: "Grand Party Celebration Combo Box", weight: "4x Assorted Boxes", quantity: 4, unitPrice: 1650, lineTotal: 6600 },
+            { name: "Belgian Triple Choc Chunk Cookies", weight: "Pack of 10", quantity: 10, unitPrice: 185, lineTotal: 1850 }
+          ]
         }
       ];
 
@@ -90,7 +110,8 @@ export const OrderHistoryModal = ({ isOpen, onClose, onTrackOrder, onReorder }) 
   const filteredOrders = orders.filter((o) => {
     if (filterType === "all") return true;
     if (filterType === "custom_cake") return o.type === "custom_cake" || o.orderId?.includes("-CK-");
-    if (filterType === "storefront") return o.type !== "custom_cake" && !o.orderId?.includes("-CK-");
+    if (filterType === "bulk_order") return o.type === "bulk_order" || o.orderId?.includes("-BLK-");
+    if (filterType === "storefront") return o.type !== "custom_cake" && o.type !== "bulk_order" && !o.orderId?.includes("-CK-") && !o.orderId?.includes("-BLK-");
     return true;
   });
 
@@ -185,7 +206,8 @@ export const OrderHistoryModal = ({ isOpen, onClose, onTrackOrder, onReorder }) 
           {[
             { id: "all", label: `All Orders (${orders.length})` },
             { id: "storefront", label: "Bakery Orders" },
-            { id: "custom_cake", label: "🎂 3D Custom Cakes" }
+            { id: "custom_cake", label: "🎂 3D Custom Cakes" },
+            { id: "bulk_order", label: "🎉 Bulk & Events" }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -219,6 +241,7 @@ export const OrderHistoryModal = ({ isOpen, onClose, onTrackOrder, onReorder }) 
           ) : (
             filteredOrders.map((ord) => {
               const isCustomCake = ord.type === "custom_cake" || ord.orderId?.includes("-CK-");
+              const isBulkOrder = ord.type === "bulk_order" || ord.orderId?.includes("-BLK-");
               return (
                 <div
                   key={ord.orderId}
@@ -240,16 +263,21 @@ export const OrderHistoryModal = ({ isOpen, onClose, onTrackOrder, onReorder }) 
                         #{ord.orderId}
                       </span>
                       <span style={{
-                        background: isCustomCake ? "#fdf2f8" : "#f0fdf4",
-                        color: isCustomCake ? "#9d174d" : "#166534",
-                        border: isCustomCake ? "1px solid #fbcfe8" : "1px solid #bbf7d0",
+                        background: isCustomCake ? "#fdf2f8" : isBulkOrder ? "#fef3c7" : "#f0fdf4",
+                        color: isCustomCake ? "#9d174d" : isBulkOrder ? "#b45309" : "#166534",
+                        border: isCustomCake ? "1px solid #fbcfe8" : isBulkOrder ? "1px solid #fde68a" : "1px solid #bbf7d0",
                         fontSize: "0.7rem",
                         fontWeight: 700,
                         padding: "0.15rem 0.5rem",
                         borderRadius: "999px"
                       }}>
-                        {isCustomCake ? "🎂 3D Custom Cake" : "🥐 Bakery Storefront"}
+                        {isCustomCake ? "🎂 3D Custom Cake" : isBulkOrder ? "🎉 Bulk & Catering" : "🥐 Bakery Storefront"}
                       </span>
+                      {ord.branchName && (
+                        <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                          📍 {ord.branchName}
+                        </span>
+                      )}
                     </div>
 
                     <div style={{ fontSize: "0.76rem", color: "var(--text-muted)" }}>

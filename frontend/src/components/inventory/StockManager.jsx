@@ -1,9 +1,13 @@
 import { useState, useEffect } from "react";
+import { PeriodicStockReportingDesk } from "./PeriodicStockReportingDesk.jsx";
+import { SmartClearanceManager } from "./SmartClearanceManager.jsx";
 
 export const StockManager = () => {
+  const [inventoryTab, setInventoryTab] = useState("fefo"); // "fefo" | "reporting" | "clearance"
   const [ingredients, setIngredients] = useState([]);
   const [fefoAlerts, setFefoAlerts] = useState(null);
   const [loading, setLoading] = useState(true);
+
 
   // Waste Form State
   const [wasteQty, setWasteQty] = useState(2);
@@ -86,19 +90,101 @@ export const StockManager = () => {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
-      {/* Header */}
-      <div className="glass-panel" style={{ padding: "1.5rem" }}>
-        <div className="badge badge-gold" style={{ marginBottom: "0.5rem" }}>
-          🧂 Warehouse & Quality Control
-        </div>
-        <h2 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-primary)", marginBottom: "0.4rem" }}>
-          FEFO Perishable Inventory & Batch Surveillance
-        </h2>
-        <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>
-          First-Expire, First-Out (FEFO) automated lot prioritization prevents perishable losses by tracking hourly shelf-life countdowns, supplier GSTIN batches, and automated flash sale price reductions.
-        </p>
+    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+      {/* Inventory Module Sub-Navigation Bar */}
+      <div
+        style={{
+          display: "flex",
+          gap: "0.5rem",
+          background: "rgba(15, 23, 42, 0.65)",
+          backdropFilter: "blur(12px)",
+          border: "1px solid rgba(255, 255, 255, 0.08)",
+          borderRadius: "14px",
+          padding: "0.6rem 0.8rem",
+          flexWrap: "wrap"
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => setInventoryTab("fefo")}
+          style={{
+            background: inventoryTab === "fefo" ? "var(--gold-500, #f59e0b)" : "rgba(255, 255, 255, 0.04)",
+            color: inventoryTab === "fefo" ? "#000000" : "#cbd5e1",
+            fontWeight: inventoryTab === "fefo" ? 800 : 600,
+            border: inventoryTab === "fefo" ? "none" : "1px solid rgba(255, 255, 255, 0.08)",
+            padding: "0.5rem 1.1rem",
+            borderRadius: "8px",
+            cursor: "pointer",
+            fontSize: "0.85rem",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.4rem"
+          }}
+        >
+          <span>📦</span>
+          <span>FEFO Raw Stock & Batches</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setInventoryTab("reporting")}
+          style={{
+            background: inventoryTab === "reporting" ? "var(--gold-500, #f59e0b)" : "rgba(255, 255, 255, 0.04)",
+            color: inventoryTab === "reporting" ? "#000000" : "#cbd5e1",
+            fontWeight: inventoryTab === "reporting" ? 800 : 600,
+            border: inventoryTab === "reporting" ? "none" : "1px solid rgba(255, 255, 255, 0.08)",
+            padding: "0.5rem 1.1rem",
+            borderRadius: "8px",
+            cursor: "pointer",
+            fontSize: "0.85rem",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.4rem"
+          }}
+        >
+          <span>⏱️</span>
+          <span>2-Hour Stock Reports (Chef ➔ Manager ➔ Admin)</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setInventoryTab("clearance")}
+          style={{
+            background: inventoryTab === "clearance" ? "var(--gold-500, #f59e0b)" : "rgba(255, 255, 255, 0.04)",
+            color: inventoryTab === "clearance" ? "#000000" : "#cbd5e1",
+            fontWeight: inventoryTab === "clearance" ? 800 : 600,
+            border: inventoryTab === "clearance" ? "none" : "1px solid rgba(255, 255, 255, 0.08)",
+            padding: "0.5rem 1.1rem",
+            borderRadius: "8px",
+            cursor: "pointer",
+            fontSize: "0.85rem",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.4rem"
+          }}
+        >
+          <span>⏳</span>
+          <span>Near-Expiry & Smart Clearance</span>
+        </button>
       </div>
+
+      {inventoryTab === "reporting" && <PeriodicStockReportingDesk />}
+      {inventoryTab === "clearance" && <SmartClearanceManager />}
+      {inventoryTab === "fefo" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
+          {/* Header */}
+          <div className="glass-panel" style={{ padding: "1.5rem" }}>
+            <div className="badge badge-gold" style={{ marginBottom: "0.5rem" }}>
+              🧂 Warehouse & Quality Control
+            </div>
+            <h2 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-primary)", marginBottom: "0.4rem" }}>
+              FEFO Perishable Inventory & Batch Surveillance
+            </h2>
+            <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>
+              First-Expire, First-Out (FEFO) automated lot prioritization prevents perishable losses by tracking hourly shelf-life countdowns, supplier GSTIN batches, and automated flash sale price reductions.
+            </p>
+          </div>
+
 
       {/* FEFO Alerts Cards */}
       {fefoAlerts && (
@@ -307,5 +393,8 @@ export const StockManager = () => {
         )}
       </div>
     </div>
-  );
+  )}
+</div>
+);
 };
+

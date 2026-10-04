@@ -2,17 +2,26 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useNotifications } from "../../context/NotificationContext.jsx";
 import { handleImageError, getSafeImageUrl } from "../../utils/imageFallback.js";
+import { PhotoCakeUploader } from "./PhotoCakeUploader.jsx";
+import { Studio3DInspirations } from "./Studio3DInspirations.jsx";
+import { CustomCakeRequestModal } from "./CustomCakeRequestModal.jsx";
 
 export const CakeBuilder = ({ onTrackOrder }) => {
   const { currentUser, token } = useAuth();
   const { openBill, addNotification } = useNotifications();
+
+  const [studioTab, setStudioTab] = useState("builder"); // "builder" | "inspirations" | "photocanvas"
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [showCustomRequestModal, setShowCustomRequestModal] = useState(false);
+  const [photoCake, setPhotoCake] = useState(null);
+  const [activeInspiration, setActiveInspiration] = useState(null);
 
   const [tiers, setTiers] = useState(2);
   const [weightKg, setWeightKg] = useState(3.5);
   const [baseSponge, setBaseSponge] = useState("Belgian Dark Chocolate");
   const [filling, setFilling] = useState("Belgian Dark Ganache");
   const [shape, setShape] = useState("Round");
-  const [theme] = useState("Floral Elegance & Gold Leaf");
+  const [theme, setTheme] = useState("Floral Elegance & Gold Leaf");
   const [selectedToppings, setSelectedToppings] = useState(["gold_foil", "macarons"]);
   const [cakeMessage, setCakeMessage] = useState("Happy 25th Anniversary! ✨");
   const [turnaround, setTurnaround] = useState("standard");
@@ -27,6 +36,7 @@ export const CakeBuilder = ({ onTrackOrder }) => {
   const [viewMode, setViewMode] = useState("3d"); // "3d" | "photo"
   const [rotationY, setRotationY] = useState(0);
   const [isAutoSpin, setIsAutoSpin] = useState(false);
+
 
   // Auto-spin 3D cake podium
   useEffect(() => {
@@ -91,6 +101,60 @@ export const CakeBuilder = ({ onTrackOrder }) => {
     }
   };
 
+  const getTierShapeStyle = (shapeType, tierLevel) => {
+    switch (shapeType) {
+      case "Square":
+        return {
+          borderRadius: "4px",
+          clipPath: "none",
+          width: tierLevel === 3 ? "110px" : tierLevel === 2 ? "160px" : "215px"
+        };
+      case "Heart":
+        return {
+          borderRadius: "16px 16px 20px 20px",
+          clipPath: "polygon(50% 0%, 82% 0%, 100% 28%, 100% 65%, 50% 100%, 0% 65%, 0% 28%, 18% 0%)",
+          width: tierLevel === 3 ? "125px" : tierLevel === 2 ? "175px" : "235px"
+        };
+      case "Hexagonal":
+        return {
+          borderRadius: "2px",
+          clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)",
+          width: tierLevel === 3 ? "130px" : tierLevel === 2 ? "185px" : "245px"
+        };
+      case "Octagonal":
+        return {
+          borderRadius: "3px",
+          clipPath: "polygon(29% 0%, 71% 0%, 100% 29%, 100% 71%, 71% 100%, 29% 100%, 0% 71%, 0% 29%)",
+          width: tierLevel === 3 ? "125px" : tierLevel === 2 ? "180px" : "240px"
+        };
+      case "Star":
+        return {
+          borderRadius: "2px",
+          clipPath: "polygon(50% 0%, 63% 35%, 100% 38%, 72% 60%, 82% 96%, 50% 74%, 18% 96%, 28% 60%, 0% 38%, 37% 35%)",
+          width: tierLevel === 3 ? "140px" : tierLevel === 2 ? "195px" : "255px"
+        };
+      case "Oval":
+        return {
+          borderRadius: "999px",
+          clipPath: "none",
+          width: tierLevel === 3 ? "145px" : tierLevel === 2 ? "200px" : "260px"
+        };
+      case "Scalloped Flower":
+        return {
+          borderRadius: "45% 55% 55% 45% / 45% 45% 55% 55%",
+          clipPath: "none",
+          width: tierLevel === 3 ? "135px" : tierLevel === 2 ? "190px" : "250px"
+        };
+      case "Round":
+      default:
+        return {
+          borderRadius: tierLevel === 3 ? "14px" : tierLevel === 2 ? "18px" : "24px",
+          clipPath: "none",
+          width: tierLevel === 3 ? "120px" : tierLevel === 2 ? "175px" : "235px"
+        };
+    }
+  };
+
   const fetchQuote = async () => {
     setIsCalculating(true);
     try {
@@ -134,8 +198,44 @@ export const CakeBuilder = ({ onTrackOrder }) => {
     { id: "gold_foil", label: "24K Edible Gold Leaf (+₹300)", icon: "✨", price: 300 },
     { id: "macarons", label: "Handcrafted Macarons (+₹250)", icon: "🍬", price: 250 },
     { id: "fresh_berries", label: "Mountain Berries & Figs (+₹280)", icon: "🍓", price: 280 },
-    { id: "fondant_sculpting", label: "3D Fondant Sculpting (+₹500)", icon: "🧸", price: 500 }
+    { id: "fondant_sculpting", label: "3D Fondant Sculpting (+₹500)", icon: "🧸", price: 500 },
+    { id: "photo_sheet", label: "Edible Sugar Sheet Photo Print (+₹350)", icon: "🖨️", price: 350 }
   ];
+
+  const handleSelectInspiration = (item) => {
+    setActiveInspiration(item);
+    setTiers(item.tiers);
+    setWeightKg(item.weightKg);
+    setBaseSponge(item.baseSponge);
+    setFilling(item.filling);
+    setShape(item.shape);
+    if (item.theme) setTheme(item.theme);
+    setSelectedToppings(item.toppings || []);
+    setCakeMessage(item.theme ? `Celebration of ${item.theme}` : "Happy Celebration! 🎂");
+    setStudioTab("builder");
+    addNotification({
+      title: "🎨 Theme Loaded into 3D Studio!",
+      message: `"${item.title}" loaded! You can now inspect, adjust tiers, or add an edible photo print.`,
+      type: "info"
+    });
+  };
+
+  const handlePhotoApply = (photoData) => {
+    setPhotoCake(photoData);
+    if (photoData) {
+      if (!selectedToppings.includes("photo_sheet")) {
+        setSelectedToppings((prev) => [...prev, "photo_sheet"]);
+      }
+      addNotification({
+        title: "📸 Edible Photo Projected!",
+        message: "Your customized photo sheet has been projected onto the top tier of your 3D cake.",
+        type: "success"
+      });
+    } else {
+      setSelectedToppings((prev) => prev.filter((id) => id !== "photo_sheet"));
+    }
+  };
+
 
   const handleBookCake = async () => {
     if (!quote || isBooking) return;
@@ -308,8 +408,183 @@ export const CakeBuilder = ({ onTrackOrder }) => {
     }
   };
 
+  const renderPhotoSheetOverlay = (tierNum) => {
+    if (!photoCake || !photoCake.photoUrl) return null;
+    const isTopTier = (tiers === 3 && tierNum === 3) || (tiers === 2 && tierNum === 2) || (tiers === 1 && tierNum === 1);
+    if (!isTopTier) return null;
+
+    const size = tierNum === 3 ? 50 : tierNum === 2 ? 62 : 72;
+    const isRound = photoCake.shape === "Round";
+    const isHeart = photoCake.shape === "Heart";
+
+    return (
+      <div
+        style={{
+          position: "absolute",
+          top: `-${Math.round(size * 0.42)}px`,
+          width: `${size}px`,
+          height: `${size}px`,
+          borderRadius: isRound ? "50%" : isHeart ? "35%" : "8px",
+          overflow: "hidden",
+          border:
+            photoCake.borderStyle === "gold_pearl"
+              ? "3px dotted #eab308"
+              : photoCake.borderStyle === "chocolate_piping"
+              ? "3px solid #382017"
+              : "2px solid #ffffff",
+          boxShadow: "0 6px 16px rgba(0,0,0,0.7), 0 0 10px rgba(234, 179, 8, 0.4)",
+          zIndex: 10,
+          background: "#ffffff",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          transform: "rotateX(15deg)"
+        }}
+        title="Custom Edible Sugar Sheet Photo Print"
+      >
+        <img
+          src={photoCake.photoUrl}
+          alt="Edible Print"
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover"
+          }}
+        />
+      </div>
+    );
+  };
+
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: "2rem" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+      {/* ═══════════ STUDIO NAVIGATION RIBBON ═══════════ */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "1rem",
+          background: "rgba(15, 23, 42, 0.65)",
+          backdropFilter: "blur(12px)",
+          border: "1px solid rgba(255, 255, 255, 0.08)",
+          borderRadius: "14px",
+          padding: "0.6rem 0.8rem"
+        }}
+      >
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={() => setStudioTab("builder")}
+            style={{
+              background: studioTab === "builder" ? "var(--gold-500, #f59e0b)" : "rgba(255, 255, 255, 0.04)",
+              color: studioTab === "builder" ? "#000000" : "#cbd5e1",
+              fontWeight: studioTab === "builder" ? 800 : 600,
+              border: studioTab === "builder" ? "none" : "1px solid rgba(255, 255, 255, 0.08)",
+              padding: "0.5rem 1rem",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontSize: "0.84rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.4rem",
+              transition: "all 0.2s"
+            }}
+          >
+            <span>🎨</span>
+            <span>3D Interactive Builder</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setStudioTab("inspirations")}
+            style={{
+              background: studioTab === "inspirations" ? "var(--gold-500, #f59e0b)" : "rgba(255, 255, 255, 0.04)",
+              color: studioTab === "inspirations" ? "#000000" : "#cbd5e1",
+              fontWeight: studioTab === "inspirations" ? 800 : 600,
+              border: studioTab === "inspirations" ? "none" : "1px solid rgba(255, 255, 255, 0.08)",
+              padding: "0.5rem 1rem",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontSize: "0.84rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.4rem",
+              transition: "all 0.2s"
+            }}
+          >
+            <span>✨</span>
+            <span>Creative Themes (Marvel, Wedding, PS5)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setStudioTab("photocanvas")}
+            style={{
+              background: studioTab === "photocanvas" ? "var(--gold-500, #f59e0b)" : "rgba(255, 255, 255, 0.04)",
+              color: studioTab === "photocanvas" ? "#000000" : "#cbd5e1",
+              fontWeight: studioTab === "photocanvas" ? 800 : 600,
+              border: studioTab === "photocanvas" ? "none" : "1px solid rgba(255, 255, 255, 0.08)",
+              padding: "0.5rem 1rem",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontSize: "0.84rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.4rem",
+              transition: "all 0.2s"
+            }}
+          >
+            <span>🖨️</span>
+            <span>Edible Photo Studio {photoCake ? "✓ (Active)" : ""}</span>
+          </button>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowCustomRequestModal(true)}
+          style={{
+            background: "linear-gradient(135deg, #e11d48 0%, #be123c 100%)",
+            color: "#ffffff",
+            border: "none",
+            borderRadius: "8px",
+            padding: "0.5rem 1.1rem",
+            fontWeight: 700,
+            fontSize: "0.84rem",
+            cursor: "pointer",
+            boxShadow: "0 4px 12px rgba(225, 29, 72, 0.35)",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.4rem"
+          }}
+        >
+          <span>📝</span>
+          <span>Bespoke Design Inquiry</span>
+        </button>
+      </div>
+
+      {/* Conditional Sub-View: Creative Inspirations Catalog */}
+      {studioTab === "inspirations" && (
+        <Studio3DInspirations
+          onSelectInspiration={handleSelectInspiration}
+          onRequestCustomDesign={() => setShowCustomRequestModal(true)}
+        />
+      )}
+
+      {/* Conditional Sub-View: Edible Photo Canvas Studio */}
+      {studioTab === "photocanvas" && (
+        <PhotoCakeUploader
+          onPhotoApply={handlePhotoApply}
+          currentPhotoUrl={photoCake?.photoUrl}
+          currentShape={photoCake?.shape || shape}
+          onClose={() => setStudioTab("builder")}
+        />
+      )}
+
+      {/* Conditional Sub-View: 3D Interactive Builder */}
+      {studioTab === "builder" && (
+        <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: "2rem" }}>
+
       {/* Left Column: Interactive Customization Form */}
       <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
         <div className="glass-panel" style={{ padding: "1.5rem" }}>
@@ -342,9 +617,9 @@ export const CakeBuilder = ({ onTrackOrder }) => {
                   setWeightKg(tierOpt.w);
                 }}
                 style={{
-                  background: tiers === tierOpt.t ? "var(--gold-gradient)" : "#ffffff",
+                  background: tiers === tierOpt.t ? "var(--gold-gradient)" : "var(--bg-card, #ffffff)",
                   color: tiers === tierOpt.t ? "#ffffff" : "var(--text-primary)",
-                  border: tiers === tierOpt.t ? "none" : "1px solid var(--border-subtle)",
+                  border: tiers === tierOpt.t ? "none" : "1px solid var(--border-color, #cbd5e1)",
                   padding: "0.9rem",
                   borderRadius: "var(--radius-md)",
                   cursor: "pointer",
@@ -375,9 +650,9 @@ export const CakeBuilder = ({ onTrackOrder }) => {
                 onChange={(e) => setBaseSponge(e.target.value)}
                 style={{
                   width: "100%",
-                  background: "#ffffff",
-                  color: "#1f2937",
-                  border: "1px solid #cbd5e1",
+                  background: "var(--bg-card, #ffffff)",
+                  color: "var(--text-primary, #1f2937)",
+                  border: "1px solid var(--border-color, #cbd5e1)",
                   borderRadius: "8px",
                   padding: "0.6rem",
                   fontSize: "0.86rem",
@@ -401,9 +676,9 @@ export const CakeBuilder = ({ onTrackOrder }) => {
                 onChange={(e) => setFilling(e.target.value)}
                 style={{
                   width: "100%",
-                  background: "#ffffff",
-                  color: "#1f2937",
-                  border: "1px solid #cbd5e1",
+                  background: "var(--bg-card, #ffffff)",
+                  color: "var(--text-primary, #1f2937)",
+                  border: "1px solid var(--border-color, #cbd5e1)",
                   borderRadius: "8px",
                   padding: "0.6rem",
                   fontSize: "0.86rem",
@@ -426,24 +701,40 @@ export const CakeBuilder = ({ onTrackOrder }) => {
             3. Shape & Artisanal Embellishments
           </h3>
 
-          <div style={{ display: "flex", gap: "0.6rem", marginBottom: "1.2rem", flexWrap: "wrap" }}>
-            {["Round", "Heart", "Hexagonal", "Square"].map((sh) => (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: "0.6rem", marginBottom: "1.4rem" }}>
+            {[
+              { id: "Round", label: "⚪ Classic Round" },
+              { id: "Square", label: "⬛ Royal Square" },
+              { id: "Heart", label: "❤️ Romance Heart" },
+              { id: "Hexagonal", label: "🔷 Geometric Hex" },
+              { id: "Octagonal", label: "🛑 Imperial Octagon" },
+              { id: "Star", label: "⭐ Celestial Star" },
+              { id: "Oval", label: "🥚 Majestic Oval" },
+              { id: "Scalloped Flower", label: "🌸 Scalloped Petal" }
+            ].map((sh) => (
               <button
-                key={sh}
-                onClick={() => setShape(sh)}
+                key={sh.id}
+                type="button"
+                onClick={() => setShape(sh.id)}
                 style={{
-                  background: shape === sh ? "var(--gold-gradient)" : "#ffffff",
-                  color: shape === sh ? "#ffffff" : "var(--text-secondary)",
-                  fontWeight: shape === sh ? 700 : 500,
-                  border: shape === sh ? "none" : "1px solid var(--border-subtle)",
-                  padding: "0.45rem 1rem",
-                  borderRadius: "var(--radius-full)",
+                  background: shape === sh.id ? "linear-gradient(135deg, #c8102e 0%, #990011 100%)" : "var(--bg-card, #ffffff)",
+                  color: shape === sh.id ? "#ffffff" : "var(--text-primary)",
+                  fontWeight: shape === sh.id ? 700 : 500,
+                  border: shape === sh.id ? "1.5px solid #e11d48" : "1px solid var(--border-color, #e2e8f0)",
+                  padding: "0.55rem 0.75rem",
+                  borderRadius: "10px",
                   cursor: "pointer",
-                  fontSize: "0.84rem",
-                  boxShadow: shape === sh ? "0 4px 12px rgba(200, 16, 46, 0.25)" : "none"
+                  fontSize: "0.8rem",
+                  textAlign: "center",
+                  transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                  boxShadow: shape === sh.id ? "0 4px 14px rgba(200, 16, 46, 0.3)" : "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "0.35rem"
                 }}
               >
-                {sh === "Heart" ? "❤️ Heart" : sh === "Hexagonal" ? "🔷 Hexagonal" : sh}
+                {sh.label}
               </button>
             ))}
           </div>
@@ -461,15 +752,15 @@ export const CakeBuilder = ({ onTrackOrder }) => {
                     gap: "0.6rem",
                     padding: "0.6rem 0.8rem",
                     borderRadius: "8px",
-                    background: isSelected ? "#fff1f2" : "#ffffff",
-                    border: isSelected ? "1.5px solid var(--crimson-500)" : "1px solid #e2e8f0",
+                    background: isSelected ? "rgba(225, 29, 72, 0.18)" : "var(--bg-card, #ffffff)",
+                    border: isSelected ? "1.5px solid var(--crimson-500)" : "1px solid var(--border-color, #e2e8f0)",
                     cursor: "pointer",
                     fontSize: "0.84rem",
                     transition: "all 0.15s ease"
                   }}
                 >
                   <span style={{ fontSize: "1.1rem" }}>{top.icon}</span>
-                  <span style={{ color: isSelected ? "var(--crimson-500)" : "var(--text-primary)", fontWeight: isSelected ? 700 : 500 }}>
+                  <span style={{ color: isSelected ? "var(--crimson-500)" : "var(--text-primary)", fontWeight: isSelected ? 700 : 600 }}>
                     {top.label}
                   </span>
                 </div>
@@ -496,11 +787,11 @@ export const CakeBuilder = ({ onTrackOrder }) => {
                 placeholder="e.g. Happy 1st Birthday, Aarav! 🧸"
                 style={{
                   width: "100%",
-                  background: "#ffffff",
-                  border: "1px solid #cbd5e1",
+                  background: "var(--bg-card, #ffffff)",
+                  border: "1px solid var(--border-color, #cbd5e1)",
                   borderRadius: "8px",
                   padding: "0.6rem 0.9rem",
-                  color: "#1f2937",
+                  color: "var(--text-primary, #1f2937)",
                   fontSize: "0.88rem",
                   boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
                 }}
@@ -601,10 +892,34 @@ export const CakeBuilder = ({ onTrackOrder }) => {
                   pointerEvents: "auto"
                 }}
               >
-                <div style={{ fontSize: "0.72rem", color: "#94a3b8", display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                  <span>Orbit:</span>
-                  <strong style={{ color: "#ffffff" }}>{Math.round(rotationY)}°</strong>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <div style={{ fontSize: "0.72rem", color: "#94a3b8", display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                    <span>Orbit:</span>
+                    <strong style={{ color: "#ffffff" }}>{Math.round(rotationY)}°</strong>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowPhotoModal(true)}
+                    style={{
+                      background: photoCake ? "rgba(245, 158, 11, 0.25)" : "rgba(255, 255, 255, 0.12)",
+                      border: photoCake ? "1px solid var(--gold-500)" : "1px solid rgba(255, 255, 255, 0.25)",
+                      color: photoCake ? "var(--gold-400)" : "#ffffff",
+                      borderRadius: "6px",
+                      padding: "0.2rem 0.55rem",
+                      fontSize: "0.72rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.3rem"
+                    }}
+                    title="Upload or crop customer photo to print on top tier"
+                  >
+                    <span>🖨️</span>
+                    <span>{photoCake ? "Edit Photo" : "+ Edible Photo"}</span>
+                  </button>
                 </div>
+
 
                 <div style={{ display: "flex", gap: "0.35rem" }}>
                   <button
@@ -697,9 +1012,8 @@ export const CakeBuilder = ({ onTrackOrder }) => {
                   <div
                     style={{
                       position: "relative",
-                      width: "120px",
                       height: "46px",
-                      borderRadius: shape === "Hexagonal" ? "4px" : "12px",
+                      ...getTierShapeStyle(shape, 3),
                       background: getSpongeStyle().body,
                       border: `1px solid ${getSpongeStyle().top}`,
                       boxShadow: "0 6px 14px rgba(0, 0, 0, 0.6), inset 0 2px 4px rgba(255,255,255,0.25)",
@@ -707,7 +1021,8 @@ export const CakeBuilder = ({ onTrackOrder }) => {
                       alignItems: "center",
                       justifyContent: "center",
                       marginBottom: "-4px",
-                      zIndex: 6
+                      zIndex: 6,
+                      transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
                     }}
                   >
                     {/* Top Tier Filling Ribbon */}
@@ -732,6 +1047,9 @@ export const CakeBuilder = ({ onTrackOrder }) => {
                       <span style={{ position: "absolute", top: "-10px", left: "10px", fontSize: "0.95rem" }}>🍓</span>
                     )}
 
+                    {/* Edible Sugar Photo Sheet Overlay */}
+                    {renderPhotoSheetOverlay(3)}
+
                     <span style={{ fontSize: "0.62rem", fontWeight: 800, color: "#ffffff", textShadow: "0 1px 3px rgba(0,0,0,0.8)", zIndex: 2 }}>
                       Tier 3
                     </span>
@@ -743,9 +1061,8 @@ export const CakeBuilder = ({ onTrackOrder }) => {
                   <div
                     style={{
                       position: "relative",
-                      width: "175px",
                       height: "54px",
-                      borderRadius: shape === "Hexagonal" ? "6px" : "16px",
+                      ...getTierShapeStyle(shape, 2),
                       background: getSpongeStyle().body,
                       border: `1.5px solid ${getSpongeStyle().top}`,
                       boxShadow: "0 8px 18px rgba(0, 0, 0, 0.65), inset 0 2px 5px rgba(255,255,255,0.22)",
@@ -753,7 +1070,8 @@ export const CakeBuilder = ({ onTrackOrder }) => {
                       alignItems: "center",
                       justifyContent: "center",
                       marginBottom: "-4px",
-                      zIndex: 4
+                      zIndex: 4,
+                      transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
                     }}
                   >
                     {/* Middle Filling Ribbon */}
@@ -781,6 +1099,9 @@ export const CakeBuilder = ({ onTrackOrder }) => {
                       <span style={{ position: "absolute", bottom: "4px", left: "14px", fontSize: "0.75rem" }}>✨</span>
                     )}
 
+                    {/* Edible Sugar Photo Sheet Overlay */}
+                    {renderPhotoSheetOverlay(2)}
+
                     <span style={{ fontSize: "0.68rem", fontWeight: 800, color: "#ffffff", textShadow: "0 1px 3px rgba(0,0,0,0.8)", zIndex: 2 }}>
                       Tier 2 • {filling}
                     </span>
@@ -791,16 +1112,16 @@ export const CakeBuilder = ({ onTrackOrder }) => {
                 <div
                   style={{
                     position: "relative",
-                    width: "235px",
                     height: "64px",
-                    borderRadius: shape === "Hexagonal" ? "8px" : "18px",
+                    ...getTierShapeStyle(shape, 1),
                     background: getSpongeStyle().body,
                     border: `1.5px solid ${getSpongeStyle().top}`,
                     boxShadow: "0 12px 28px rgba(0, 0, 0, 0.75), inset 0 3px 6px rgba(255,255,255,0.2)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    zIndex: 2
+                    zIndex: 2,
+                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
                   }}
                 >
                   {/* Base Tier Filling Ribbon */}
@@ -824,6 +1145,10 @@ export const CakeBuilder = ({ onTrackOrder }) => {
                   {selectedToppings.includes("gold_foil") && (
                     <span style={{ position: "absolute", top: "-7px", left: "16px", fontSize: "0.8rem" }}>✨</span>
                   )}
+
+                  {/* Edible Sugar Photo Sheet Overlay */}
+                  {renderPhotoSheetOverlay(1)}
+
 
                   {/* Dynamic Custom Cake Piped Message Banner */}
                   <div
@@ -898,8 +1223,8 @@ export const CakeBuilder = ({ onTrackOrder }) => {
               boxShadow: "0 10px 30px rgba(0,0,0,0.6)"
             }}>
               <img
-                src={getSafeImageUrl("https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=700&auto=format&fit=crop&q=80")}
-                alt="Custom Designer Cake"
+                src={getSafeImageUrl(activeInspiration?.imageUrl || "/images/inspirations/iron-man-cake.jpg")}
+                alt={activeInspiration?.title || "Custom Designer Cake"}
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
                 onError={handleImageError}
               />
@@ -1098,5 +1423,52 @@ export const CakeBuilder = ({ onTrackOrder }) => {
         )}
       </div>
     </div>
-  );
+  )}
+
+  {/* Popover Modals */}
+  {showPhotoModal && (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        backgroundColor: "rgba(0, 0, 0, 0.8)",
+        backdropFilter: "blur(6px)",
+        zIndex: 9999,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "1rem"
+      }}
+      onClick={() => setShowPhotoModal(false)}
+    >
+      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: "680px" }}>
+        <PhotoCakeUploader
+          onPhotoApply={handlePhotoApply}
+          currentPhotoUrl={photoCake?.photoUrl}
+          currentShape={photoCake?.shape || shape}
+          onClose={() => setShowPhotoModal(false)}
+        />
+      </div>
+    </div>
+  )}
+
+  {showCustomRequestModal && (
+    <CustomCakeRequestModal
+      initialData={{
+        theme: activeInspiration?.theme || "",
+        category: activeInspiration?.category || "Superhero & Comics",
+        baseSponge,
+        filling,
+        tiers,
+        weightKg,
+        shape,
+        photoUrl: photoCake?.photoUrl,
+        photoShape: photoCake?.shape
+      }}
+      onClose={() => setShowCustomRequestModal(false)}
+    />
+  )}
+</div>
+);
 };
+

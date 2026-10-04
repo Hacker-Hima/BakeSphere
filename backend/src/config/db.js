@@ -9,6 +9,8 @@ import Product from "../models/Product.js";
 import Order from "../models/Order.js";
 import AuditLog from "../models/AuditLog.js";
 import User from "../models/User.js";
+import Branch from "../models/Branch.js";
+import { bakeryBranches } from "../data/branches.js";
 
 // Windows Node.js DNS resolver enhancement for MongoDB Atlas SRV records
 try {
@@ -19,6 +21,12 @@ try {
 
 const seedDatabaseIfEmpty = async () => {
   try {
+    const branchCount = await Branch.countDocuments();
+    if (branchCount === 0 && Array.isArray(bakeryBranches) && bakeryBranches.length > 0) {
+      await Branch.insertMany(bakeryBranches);
+      console.log(`🌱 [MongoDB Atlas] Initialized ${bakeryBranches.length} bakery branches in database.`);
+    }
+
     const productCount = await Product.countDocuments();
     if (productCount === 0 && Array.isArray(bakeryProducts) && bakeryProducts.length > 0) {
       await Product.insertMany(bakeryProducts);

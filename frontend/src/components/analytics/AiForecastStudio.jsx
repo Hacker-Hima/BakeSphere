@@ -25,7 +25,7 @@ export const AiForecastStudio = () => {
         if (mounted) {
           setForecastData(foreJson);
           setWasteRiskData(wasteJson);
-          setProfitLossData(plJson.data || []);
+          setProfitLossData(Array.isArray(plJson) ? plJson : (plJson.data || []));
           setLoading(false);
         }
       } catch (err) {

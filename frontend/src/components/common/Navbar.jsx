@@ -5,6 +5,7 @@ import { useThemeSettings } from "../../context/ThemeSettingsContext.jsx";
 import { useRecentlyAccessed } from "../../context/RecentlyAccessedContext.jsx";
 import { handleImageError, getSafeImageUrl } from "../../utils/imageFallback.js";
 import { NotificationBell } from "./NotificationBell.jsx";
+import { ArtisanLogo } from "./ArtisanLogo.jsx";
 
 export const Navbar = ({
   activeTab,
@@ -15,25 +16,31 @@ export const Navbar = ({
   onOpenCart,
   deliveryCity,
   onOpenCityModal,
+  searchQuery,
+  setSearchQuery,
   onOpenTracking,
-  onOpenHistory
+  onOpenHistory,
+  onOpenBranchFinder
 }) => {
-  const { currentUser, role, allowedTabs } = useAuth();
+  const { currentUser, role, allowedTabs, activeBranchName } = useAuth();
   const { t } = useLanguage();
-  const { openSettings } = useThemeSettings();
+  const { openSettings, settings } = useThemeSettings();
   const { recentItems, clearRecent } = useRecentlyAccessed();
 
   const allNavLinks = [
     { id: "shop", label: t("navOnlineBakery"), icon: "🍰" },
     { id: "billing", label: t("navBilling"), icon: "🧾" },
+    { id: "bulk-order", label: "Bulk Catering", icon: "📦" },
     { id: "pos", label: t("navPosBilling"), icon: "🛒" },
     { id: "custom-cake", label: t("nav3dCakeStudio"), icon: "🎂" },
+    { id: "feedback", label: "Reviews & Ratings", icon: "⭐" },
     { id: "production", label: t("navRecipeScaler"), icon: "🧑‍🍳" },
     { id: "inventory", label: t("navFefoInventory"), icon: "⏳" },
     { id: "ai-forecast", label: t("navAiForecaster"), icon: "📈" },
     { id: "dashboard", label: t("navExecutiveDashboard"), icon: "📊" },
     { id: "branches", label: t("navBranches"), icon: "🏪" }
   ];
+
 
   // RBAC: Filter navigation tabs based on logged-in user's role
   const navLinks = allNavLinks.filter((link) =>
@@ -42,27 +49,23 @@ export const Navbar = ({
 
   return (
     <header className="bk-header">
-      {/* ═══════════════ MAIN WHITE / BRAND NAVBAR ═══════════════ */}
+      {/* ═══════════════ MAIN 3-COLUMN NAVBAR: LEFT | CENTER LOGO | RIGHT ═══════════════ */}
       <div className="bk-main-nav">
         <div className="bk-main-nav-inner">
-          {/* Left: Brand Logo & Location Pill */}
+
+          {/* ── LEFT: Heritage pill + Location ── */}
           <div className="bk-header-left">
-            <div
-              className="bk-brand-logo"
-              onClick={() => setActiveTab("shop")}
+            {/* Heritage / Branches pill */}
+            <button
+              type="button"
+              className="bk-nav-action-pill-btn bk-heritage-pill"
+              onClick={onOpenBranchFinder}
+              title="Find Nearest Bakery Branch & Live Oven Hub on Map"
+              id="bk-nav-branch-finder-btn"
             >
-              <div className="bk-logo-badge-frame">
-                <img
-                  src="/logo.png"
-                  alt="BakeSphere Artisan Bakery"
-                  className="bk-logo-img"
-                />
-              </div>
-              <div className="bk-logo-text-group">
-                <span className="bk-logo-main">BakeSphere</span>
-                <span className="bk-logo-tagline">{t("tagline")}</span>
-              </div>
-            </div>
+              <span className="bk-nav-action-icon">🏛️</span>
+              <span className="bk-nav-action-label">Heritage</span>
+            </button>
 
             {/* Delivery Location & Pincode Pill */}
             <div
@@ -72,17 +75,34 @@ export const Navbar = ({
             >
               <span className="bk-location-pin-icon">📍</span>
               <div className="bk-location-details">
-                <span className="bk-location-micro">{t("deliverTo")}</span>
+                <span className="bk-location-micro">{t("deliverTo") || "Deliver to"}</span>
                 <span className="bk-location-current">
-                  <strong>{deliveryCity?.name || "Chennai"}</strong>
-                  {deliveryCity?.pincode ? ` - ${deliveryCity.pincode}` : ""}
+                  <strong>{deliveryCity?.name || "Bangalore"}</strong>
+                  {deliveryCity?.pincode ? ` - ${deliveryCity.pincode}` : " - 560001"}
                   <span className="bk-location-chevron">▾</span>
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Right Action Icons & Tools */}
+          {/* ── CENTER: Brand Logo (perfectly centered) ── */}
+          <div className="bk-header-center">
+            <div
+              className="bk-brand-logo"
+              onClick={() => setActiveTab("shop")}
+              title="BakeSphere Artisan Bakery - Return to Home"
+            >
+              <div className="bk-logo-artisan-plaque">
+                <img
+                  src="/logo-artisan.png"
+                  alt="BakeSphere Artisan Bakery"
+                  className="bk-logo-artisan-img"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* ── RIGHT: Track, Orders, Bell, Profile, Menu ── */}
           <div className="bk-header-actions">
             {/* Live Visual Kitchen Order Tracker Button */}
             <button
@@ -108,8 +128,8 @@ export const Navbar = ({
               <span className="bk-nav-action-label">Orders</span>
             </button>
 
-            {/* Real-Time Notification Bell & Invoices */}
-            <NotificationBell />
+            {/* Real-Time Notification Bell & Live Alert Center */}
+            <NotificationBell onNavigateTab={setActiveTab} />
 
             {/* User Profile Mini Badge (Opens Settings) */}
             {currentUser ? (
@@ -139,7 +159,7 @@ export const Navbar = ({
               </button>
             )}
 
-            {/* TOP-RIGHT CORNER SETTINGS & MENU BUTTON (PROFESSIONAL 3-LINE HAMBURGER) */}
+            {/* Settings / Hamburger */}
             <button
               type="button"
               className="bk-nav-hamburger-btn bk-settings-corner-btn"
@@ -153,6 +173,7 @@ export const Navbar = ({
               <span className="bk-hamburger-line"></span>
             </button>
           </div>
+
         </div>
       </div>
 

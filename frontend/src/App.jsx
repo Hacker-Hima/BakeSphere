@@ -18,6 +18,8 @@ import { StockManager } from "./components/inventory/StockManager.jsx";
 import { AiForecastStudio } from "./components/analytics/AiForecastStudio.jsx";
 import { BranchManager } from "./components/branches/BranchManager.jsx";
 import { BillingManager } from "./components/billing/BillingManager.jsx";
+import { BulkOrderPortal } from "./components/bulkOrder/BulkOrderPortal.jsx";
+import { FeedbackPortal } from "./components/feedback/FeedbackPortal.jsx";
 import { BillModal } from "./components/billing/BillModal.jsx";
 import { OrderTrackingModal } from "./components/common/OrderTrackingModal.jsx";
 import { OrderHistoryModal } from "./components/common/OrderHistoryModal.jsx";
@@ -28,6 +30,7 @@ import { CartDrawer } from "./components/shop/CartDrawer.jsx";
 import { BottomCartBar } from "./components/shop/BottomCartBar.jsx";
 import { QuickViewModal } from "./components/shop/QuickViewModal.jsx";
 import { CitySelectorModal } from "./components/shop/CitySelectorModal.jsx";
+import { BranchFinderModal } from "./components/branches/BranchFinderModal.jsx";
 
 const AppContent = () => {
   const { currentUser, allowedTabs, hasPermission, role } = useAuth();
@@ -37,6 +40,7 @@ const AppContent = () => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [cityModalOpen, setCityModalOpen] = useState(false);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+  const [branchFinderOpen, setBranchFinderOpen] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [trackingModalOpen, setTrackingModalOpen] = useState(false);
@@ -133,6 +137,7 @@ const AppContent = () => {
     const tabMeta = {
       shop: { label: "Online Bakery", icon: "🍰" },
       billing: { label: "Billing & Invoices", icon: "🧾" },
+      "bulk-order": { label: "Bulk Catering", icon: "📦" },
       dashboard: { label: "Executive Dashboard", icon: "📊" },
       pos: { label: "POS Billing", icon: "🛒" },
       "custom-cake": { label: "3D Cake Studio", icon: "🎂" },
@@ -236,6 +241,7 @@ const AppContent = () => {
         setSearchQuery={setSearchQuery}
         onOpenTracking={() => handleOpenTracking()}
         onOpenHistory={handleOpenHistory}
+        onOpenBranchFinder={() => setBranchFinderOpen(true)}
       />
 
       {/* Main View Container */}
@@ -252,6 +258,7 @@ const AppContent = () => {
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
             deliveryCity={deliveryCity}
+            onOpenBranchFinder={() => setBranchFinderOpen(true)}
           />
         )}
 
@@ -259,6 +266,13 @@ const AppContent = () => {
         {hasPermission("billing") && activeTab === "billing" && (
           <div className="bk-erp-container">
             <BillingManager />
+          </div>
+        )}
+
+        {/* Dedicated Event Bulk Ordering & Catering Module */}
+        {hasPermission("bulk-order") && activeTab === "bulk-order" && (
+          <div className="bk-erp-container">
+            <BulkOrderPortal />
           </div>
         )}
 
@@ -302,6 +316,13 @@ const AppContent = () => {
         {hasPermission("branches") && activeTab === "branches" && (
           <div className="bk-erp-container">
             <BranchManager />
+          </div>
+        )}
+
+        {/* Customer Feedback & Reviews Module */}
+        {hasPermission("feedback") && activeTab === "feedback" && (
+          <div className="bk-erp-container">
+            <FeedbackPortal />
           </div>
         )}
 
@@ -366,6 +387,12 @@ const AppContent = () => {
         onClose={() => setCityModalOpen(false)}
         currentCity={deliveryCity}
         onSelectCity={(city) => setDeliveryCity(city)}
+      />
+
+      {/* Chennai Nearby Bakery Branch Finder + Live OpenStreetMap Modal */}
+      <BranchFinderModal
+        isOpen={branchFinderOpen}
+        onClose={() => setBranchFinderOpen(false)}
       />
 
       {/* Global AI Chatbot: Chef Pierre */}

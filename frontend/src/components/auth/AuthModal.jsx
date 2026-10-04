@@ -122,7 +122,7 @@ export const AuthModal = ({ isOpen, onClose }) => {
           <div className="bk-auth-modal-brand-flex">
             <div className="bk-auth-modal-logo-frame">
               <img
-                src="/logo.png"
+                src="/logo-artisan.png"
                 alt="BakeSphere"
                 className="bk-auth-modal-logo-img"
               />

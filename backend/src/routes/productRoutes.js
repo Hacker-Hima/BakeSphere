@@ -8,7 +8,7 @@ const router = express.Router();
 
 // Get all products with optional filters: category, search query, barcode, inStock
 router.get("/", async (req, res) => {
-  const { category, search, barcode, minPrice, maxPrice } = req.query;
+  const { category, search, barcode, minPrice, maxPrice, bulkOnly, egglessOnly, sortBy } = req.query;
 
   let results = [];
   if (mongoose.connection.readyState === 1) {
@@ -36,6 +36,14 @@ router.get("/", async (req, res) => {
     results = results.filter((p) => p.barcode === barcode);
   }
 
+  if (bulkOnly === "true") {
+    results = results.filter((p) => p.suitableForBulk === true);
+  }
+
+  if (egglessOnly === "true") {
+    results = results.filter((p) => p.isEggless === true);
+  }
+
   if (search) {
     const q = search.toLowerCase();
     results = results.filter(
@@ -52,6 +60,14 @@ router.get("/", async (req, res) => {
   }
   if (maxPrice) {
     results = results.filter((p) => p.sellingPrice <= parseFloat(maxPrice));
+  }
+
+  if (sortBy === "price-low") {
+    results.sort((a, b) => a.sellingPrice - b.sellingPrice);
+  } else if (sortBy === "price-high") {
+    results.sort((a, b) => b.sellingPrice - a.sellingPrice);
+  } else if (sortBy === "rating") {
+    results.sort((a, b) => (b.rating || 0) - (a.rating || 0));
   }
 
   res.json({

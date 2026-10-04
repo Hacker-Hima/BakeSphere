@@ -15,8 +15,12 @@ import apiDocRoutes from "./routes/apiDocRoutes.js";
 import equipmentRoutes from "./routes/equipmentRoutes.js";
 import supplierRoutes from "./routes/supplierRoutes.js";
 import auditRoutes from "./routes/auditRoutes.js";
+import branchRoutes from "./routes/branchRoutes.js";
+import bulkOrderRoutes from "./routes/bulkOrderRoutes.js";
+import reviewRoutes from "./routes/reviewRoutes.js";
 
 import connectDB from "./config/db.js";
+
 import mongoose from "mongoose";
 
 dotenv.config();
@@ -35,11 +39,20 @@ app.use(cors({
 }));
 app.use(express.json());
 
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 // Request logging middleware
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
   next();
 });
+
+// Serve public static images
+app.use("/images", express.static(path.resolve(__dirname, "../../frontend/public/images")));
 
 // Root route
 app.get("/", (req, res) => {
@@ -98,8 +111,12 @@ app.use("/api/docs", apiDocRoutes);
 app.use("/api/equipment", equipmentRoutes);
 app.use("/api/suppliers", supplierRoutes);
 app.use("/api/audit", auditRoutes);
+app.use("/api/branches", branchRoutes);
+app.use("/api/bulk-orders", bulkOrderRoutes);
+app.use("/api/reviews", reviewRoutes);
 
 // 404 Handler
+
 app.use((req, res) => {
   res.status(404).json({
     error: "Endpoint not found",

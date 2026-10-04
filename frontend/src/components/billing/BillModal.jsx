@@ -143,15 +143,28 @@ export const BillModal = ({ bill, isOpen, onClose }) => {
         >
           {/* Store Brand & GST Header */}
           <div style={{ textAlign: "center", borderBottom: "1.5px dashed #cbd5e1", paddingBottom: "1.2rem", marginBottom: "1.2rem" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.6rem" }}>
-              <img
-                src="/logo.png"
-                alt="BakeSphere Artisan Bakery"
-                style={{ width: "36px", height: "36px", borderRadius: "50%", objectFit: "contain" }}
-              />
-              <span style={{ fontSize: "1.45rem", fontWeight: 900, color: "#be123c", letterSpacing: "-0.02em" }}>
-                BakeSphere
-              </span>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.85rem" }}>
+              <div
+                style={{
+                  width: "130px",
+                  height: "60px",
+                  borderRadius: "10px",
+                  padding: "2px",
+                  background: "linear-gradient(135deg, #fef08a 0%, #f59e0b 45%, #be123c 100%)",
+                  boxShadow: "0 0 16px rgba(245, 158, 11, 0.45), 0 4px 10px rgba(0,0,0,0.15)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  overflow: "hidden"
+                }}
+              >
+                <img
+                  src="/logo.png"
+                  alt="BakeSphere Artisan Bakery"
+                  style={{ width: "100%", height: "100%", borderRadius: "8px", objectFit: "contain", background: "#141311" }}
+                />
+              </div>
             </div>
             <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.06em", marginTop: "2px" }}>
               Artisanal Patisserie & Smart Kitchen ERP

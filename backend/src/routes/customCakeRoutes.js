@@ -2,11 +2,14 @@ import express from "express";
 import mongoose from "mongoose";
 import { bakeryOrders } from "../data/orders.js";
 import { auditLogs } from "../data/auditLogs.js";
+import { CAKE_INSPIRATIONS, INSPIRATION_CATEGORIES } from "../data/cakeInspirations.js";
+import { customCakeRequests } from "../data/customCakeRequests.js";
 import { authenticateToken } from "../middleware/auth.js";
 import Order from "../models/Order.js";
 import AuditLog from "../models/AuditLog.js";
 
 const router = express.Router();
+
 
 // Dynamic Custom Cake Pricing Engine (Non-CRUD Resume Feature)
 router.post("/quote", (req, res) => {
@@ -53,6 +56,7 @@ router.post("/quote", (req, res) => {
     if (toppings.includes("macarons")) toppingsFee += 250.0;
     if (toppings.includes("fresh_berries")) toppingsFee += 280.0;
     if (toppings.includes("fondant_sculpting")) toppingsFee += 500.0;
+    if (toppings.includes("photo_sheet")) toppingsFee += 350.0;
   }
 
   // Rush production turnaround surcharge
@@ -181,4 +185,151 @@ router.post("/submit", authenticateToken, (req, res) => {
   });
 });
 
+// GET /api/custom-cakes/inspirations
+router.get("/inspirations", (req, res) => {
+  const { category, search } = req.query;
+  let items = [...CAKE_INSPIRATIONS];
+
+  if (category && category !== "All Themes") {
+    items = items.filter(
+      (item) => item.category.toLowerCase() === category.toLowerCase()
+    );
+  }
+
+  if (search && search.trim()) {
+    const q = search.toLowerCase().trim();
+    items = items.filter(
+      (item) =>
+        item.title.toLowerCase().includes(q) ||
+        item.description.toLowerCase().includes(q) ||
+        item.theme.toLowerCase().includes(q) ||
+        (item.tags && item.tags.some((t) => t.toLowerCase().includes(q)))
+    );
+  }
+
+  res.json({
+    categories: INSPIRATION_CATEGORIES,
+    count: items.length,
+    inspirations: items
+  });
+});
+
+// GET /api/custom-cakes/inspirations/:id
+router.get("/inspirations/:id", (req, res) => {
+  const item = CAKE_INSPIRATIONS.find((i) => i.id === req.params.id);
+  if (!item) {
+    return res.status(404).json({ error: "Cake inspiration theme not found." });
+  }
+  res.json({ inspiration: item });
+});
+
+// POST /api/custom-cakes/custom-request (Customer submits custom design / photo cake inquiry)
+router.post("/custom-request", (req, res) => {
+  const {
+    customerName,
+    customerPhone,
+    customerEmail,
+    branchId = "BR-01",
+    branchName = "Flagship T. Nagar Hub",
+    theme,
+    category = "Custom Design",
+    tiers = 1,
+    weightKg = 2,
+    baseSponge = "Belgian Dark Chocolate",
+    filling = "Belgian Dark Ganache",
+    shape = "Round",
+    colorPalette = [],
+    cakeMessage,
+    photoCakeUrl,
+    photoCropShape = "Round",
+    specialInstructions,
+    deliveryDate,
+    deliveryTimeSlot,
+    deliveryAddress
+  } = req.body;
+
+  if (!theme || !theme.trim()) {
+    return res.status(400).json({ error: "Please provide a theme or idea description for your custom cake." });
+  }
+
+  const requestId = `CCR-${Date.now().toString().slice(-4)}`;
+  const estimatedQuote = Math.round((parseFloat(weightKg) || 2) * 1100 + (parseInt(tiers, 10) > 1 ? 500 : 0) + (photoCakeUrl ? 350 : 0));
+
+  const newRequest = {
+    id: requestId,
+    customerName: customerName || "Valued Customer",
+    customerPhone: customerPhone || "+91 98400 00000",
+    customerEmail: customerEmail || "customer@bakesphere.com",
+    branchId,
+    branchName,
+    theme,
+    category,
+    tiers: parseInt(tiers, 10) || 1,
+    weightKg: parseFloat(weightKg) || 2,
+    baseSponge,
+    filling,
+    shape,
+    colorPalette,
+    cakeMessage: cakeMessage || "Happy Celebration! 🎂",
+    photoCakeUrl: photoCakeUrl || null,
+    photoCropShape,
+    specialInstructions: specialInstructions || "",
+    deliveryDate: deliveryDate || new Date(Date.now() + 72 * 3600 * 1000).toISOString().split("T")[0],
+    deliveryTimeSlot: deliveryTimeSlot || "05:00 PM – 07:00 PM",
+    deliveryAddress: deliveryAddress || "Pickup at Branch",
+    status: "quoted",
+    estimatedQuote,
+    assignedChef: "Chef Pierre Bouchard",
+    createdAt: new Date().toISOString()
+  };
+
+  customCakeRequests.unshift(newRequest);
+
+  res.status(201).json({
+    message: "Custom cake design inquiry received! A master pastry chef will review your design.",
+    request: newRequest
+  });
+});
+
+// GET /api/custom-cakes/custom-requests (For Manager / Admin Review)
+router.get("/custom-requests", (req, res) => {
+  const { branchId, status } = req.query;
+  let requests = [...customCakeRequests];
+
+  if (branchId && branchId !== "ALL") {
+    requests = requests.filter((r) => r.branchId === branchId);
+  }
+
+  if (status && status !== "ALL") {
+    requests = requests.filter((r) => r.status === status);
+  }
+
+  res.json({
+    count: requests.length,
+    requests
+  });
+});
+
+// PATCH /api/custom-cakes/custom-requests/:id/status
+router.patch("/custom-requests/:id/status", (req, res) => {
+  const { id } = req.params;
+  const { status, estimatedQuote, chefNotes, assignedChef } = req.body;
+
+  const reqItem = customCakeRequests.find((r) => r.id === id);
+  if (!reqItem) {
+    return res.status(404).json({ error: "Custom cake request not found." });
+  }
+
+  if (status) reqItem.status = status;
+  if (estimatedQuote) reqItem.estimatedQuote = Number(estimatedQuote);
+  if (chefNotes) reqItem.chefNotes = chefNotes;
+  if (assignedChef) reqItem.assignedChef = assignedChef;
+
+  res.json({
+    message: "Custom cake request updated.",
+    request: reqItem
+  });
+});
+
 export default router;
+

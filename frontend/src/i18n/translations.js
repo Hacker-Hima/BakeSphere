@@ -23,6 +23,8 @@ export const translations = {
     navExecutiveDashboard: "Executive Dashboard",
     navBranches: "Branches",
     navBilling: "Billing & Invoices",
+    navBulkOrder: "Bulk Orders & Events",
+    navFeedback: "Reviews & Ratings",
     navApiDocs: "API Docs",
 
     // Storefront Hero & Sections

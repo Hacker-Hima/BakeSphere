@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { handleImageError, getSafeImageUrl } from "../../utils/imageFallback.js";
 
@@ -186,6 +186,7 @@ export const AuthPortal = ({ onNavigateTab }) => {
   const [email, setEmail] = useState("admin@bakesphere.com");
   const [password, setPassword] = useState("Bakery@2026");
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [successMsg, setSuccessMsg] = useState("");
 
   // Registration state
@@ -218,6 +219,104 @@ export const AuthPortal = ({ onNavigateTab }) => {
   const [customGoogleMode, setCustomGoogleMode] = useState(false);
   const [customGoogleEmail, setCustomGoogleEmail] = useState("");
   const [customGoogleName, setCustomGoogleName] = useState("");
+  const particleCanvasRef = useRef(null);
+
+  // Background Bakery Emoji Particles Animation
+  useEffect(() => {
+    const canvas = particleCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    let animationFrameId;
+
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    resize();
+    window.addEventListener("resize", resize);
+
+    // Bakery-themed emoji symbols — fewer, purposeful
+    const BAKERY_EMOJIS = ["🥐", "🌾", "🎂", "🍪", "🧁", "🥖", "🍩", "☕", "🌟", "🍰", "🥨", "🍫"];
+    const PARTICLE_COUNT = 18;
+
+    const particles = Array.from({ length: PARTICLE_COUNT }, () => ({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      emoji: BAKERY_EMOJIS[Math.floor(Math.random() * BAKERY_EMOJIS.length)],
+      size: Math.random() * 14 + 14,        // 14–28px — readable but not huge
+      alpha: Math.random() * 0.35 + 0.12,  // subtle transparency
+      speedY: -(Math.random() * 0.35 + 0.1), // slow upward drift
+      speedX: (Math.random() - 0.5) * 0.25,
+      wobbleSpeed: Math.random() * 0.018 + 0.006,
+      wobbleAngle: Math.random() * Math.PI * 2,
+      wobbleRadius: Math.random() * 1.2 + 0.4,
+      rotation: (Math.random() - 0.5) * 0.4, // slight tilt
+      rotSpeed: (Math.random() - 0.5) * 0.003
+    }));
+
+    let mouseX = -1000;
+    let mouseY = -1000;
+
+    const handleMouseMove = (e) => {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+    };
+    window.addEventListener("mousemove", handleMouseMove);
+
+    const render = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      particles.forEach((p) => {
+        // Gentle drift & wobble
+        p.wobbleAngle += p.wobbleSpeed;
+        p.y += p.speedY;
+        p.x += p.speedX + Math.sin(p.wobbleAngle) * p.wobbleRadius;
+        p.rotation += p.rotSpeed;
+
+        // Subtle mouse repulsion
+        const dx = p.x - mouseX;
+        const dy = p.y - mouseY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 100 && dist > 0) {
+          const force = ((100 - dist) / 100) * 0.5;
+          p.x += (dx / dist) * force;
+          p.y += (dy / dist) * force;
+        }
+
+        // Wrap around screen
+        if (p.y < -40) {
+          p.y = canvas.height + 40;
+          p.x = Math.random() * canvas.width;
+        }
+        if (p.x < -40) p.x = canvas.width + 40;
+        if (p.x > canvas.width + 40) p.x = -40;
+
+        // Gentle pulse alpha
+        const pulseAlpha = p.alpha + Math.sin(p.wobbleAngle * 1.5) * 0.07;
+        const alphaClamped = Math.max(0.08, Math.min(0.5, pulseAlpha));
+
+        ctx.save();
+        ctx.globalAlpha = alphaClamped;
+        ctx.font = `${p.size}px serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rotation);
+        ctx.fillText(p.emoji, 0, 0);
+        ctx.restore();
+      });
+
+      animationFrameId = requestAnimationFrame(render);
+    };
+
+    render();
+
+    return () => {
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("mousemove", handleMouseMove);
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, []);
 
   // Auto-rotate visual showcase every 4 seconds
   useEffect(() => {
@@ -483,7 +582,24 @@ export const AuthPortal = ({ onNavigateTab }) => {
       <div className="bk-auth-v2-bg-vignette" />
       <div className="bk-auth-v2-floating-orb bk-auth-v2-orb-1" />
       <div className="bk-auth-v2-floating-orb bk-auth-v2-orb-2" />
-      <div className="bk-auth-v2-floating-orb bk-auth-v2-orb-3" />
+      {/* ══════════ FLOATING GOLDEN AMBIENT PARTICLES CANVAS ══════════ */}
+      <canvas ref={particleCanvasRef} className="bk-auth-particle-canvas" aria-hidden="true" />
+
+      {/* ══════════ FLOATING BAKERY BACKGROUND ANIMATIONS ══════════ */}
+      <div className="bk-auth-floating-bakery-stage" aria-hidden="true">
+        <span className="bk-float-item bk-float-item-1" title="Croissant">🥐</span>
+        <span className="bk-float-item bk-float-item-2" title="Wheat">🌾</span>
+        <span className="bk-float-item bk-float-item-3" title="Chef Hat">🧑‍🍳</span>
+        <span className="bk-float-item bk-float-item-4" title="Baguette">🥖</span>
+        <span className="bk-float-item bk-float-item-5" title="Macaron">🍬</span>
+        <span className="bk-float-item bk-float-item-6" title="Sparkle">✨</span>
+        <span className="bk-float-item bk-float-item-7" title="Cupcake">🧁</span>
+        <span className="bk-float-item bk-float-item-8" title="Berry">🍓</span>
+        <span className="bk-float-item bk-float-item-9" title="Pretzel">🥨</span>
+        <span className="bk-float-item bk-float-item-10" title="Star">✦</span>
+        <span className="bk-float-item bk-float-item-11" title="Cake Slice">🍰</span>
+        <span className="bk-float-item bk-float-item-12" title="Honey">🍯</span>
+      </div>
 
       {/* ══════════ ACTIVE SESSION BANNER ══════════ */}
       {currentUser && (
@@ -525,85 +641,73 @@ export const AuthPortal = ({ onNavigateTab }) => {
         </div>
       )}
 
-      {/* ══════════ SLEEK ARTISAN AUTH CARD ══════════ */}
+      {/* ══════════ SLEEK ARTISAN AUTH CARD (MATCHING REFERENCE UI) ══════════ */}
       <div className="bk-auth-v2-card">
-        {/* LEFT HERO - MINIMAL ARTISAN LOGO SHOWCASE & ANIMATIONS */}
-        <div className="bk-auth-v2-hero bk-hero-minimal-artisan">
+        {/* LEFT HERO - EXACT MATCH TO REFERENCE ARTISAN BAKERY DESIGN */}
+        <div className="bk-auth-v2-hero bk-hero-artisan-backdrop">
+          {/* Subtle dark gradient overlay to give rich contrast for text over cake photo */}
+          <div className="bk-hero-photo-tint" />
+
           {/* Top Brand Pill & Live Status */}
-          <div className="bk-auth-v2-hero-header" style={{ width: "100%" }}>
+          <div className="bk-auth-v2-hero-header">
             <div className="bk-hero-status-pill">
-              <span className="bk-hero-status-sparkle">✦</span>
+              <span className="bk-hero-status-icon">👨‍🍳</span>
               <span>Artisan Boulangerie & Pâtisserie</span>
             </div>
-            <div className="bk-auth-v2-live-indicator">
-              <span className="bk-auth-v2-pulse-dot" />
-              <span>3 Branches Live</span>
-            </div>
-          </div>
-
-          {/* Central Logo & Orbital Animations Stage */}
-          <div className="bk-hero-logo-stage">
-            {/* Ambient Radial Aura Glow */}
-            <div className="bk-hero-aura-ambient" />
-
-            {/* Slow Outer Orbit with Orbiting Star and Pearl */}
-            <div className="bk-hero-orbit-ring bk-hero-orbit-outer">
-              <span className="bk-hero-satellite bk-hero-satellite-star">✦</span>
-              <span className="bk-hero-satellite bk-hero-satellite-pearl" />
-            </div>
-
-            {/* Counter-Rotating Dashed Gold Middle Ring */}
-            <div className="bk-hero-orbit-ring bk-hero-orbit-inner">
-              <span className="bk-hero-satellite bk-hero-satellite-sparkle">✨</span>
-            </div>
-
-            {/* Master Logo Medallion with Levitation Animation */}
-            <div className="bk-hero-master-emblem">
-              <div className="bk-hero-emblem-bezel">
-                <img
-                  src="/logo.png"
-                  alt="BakeSphere Master Artisan Seal"
-                  className="bk-hero-emblem-image"
-                />
+            <div className="bk-hero-status-pill bk-hero-branch-pill">
+              <span className="bk-hero-branch-icon">🏪</span>
+              <div className="bk-hero-branch-col">
+                <span className="bk-hero-branch-title">3 Branches Live</span>
+                <span className="bk-hero-branch-cities">Bangalore • Chennai • Coimbatore</span>
               </div>
             </div>
           </div>
 
-          {/* Brand Identity & Typography */}
-          <div className="bk-hero-brand-block">
-            <h1 className="bk-hero-brand-title">BakeSphere</h1>
-            <p className="bk-hero-brand-subtitle">Artisan Viennoiserie & Kitchen Cloud</p>
-            <div className="bk-hero-divider-flourish">
-              <span className="bk-hero-divider-line" />
-              <span className="bk-hero-divider-symbol">✦</span>
-              <span className="bk-hero-divider-line" />
-            </div>
-            <p className="bk-hero-brand-desc">
-              Classical French baking craftsmanship meets intelligent cloud production, 3D custom cakes, and real-time multi-branch ERP.
-            </p>
+          {/* Center Master Logo as the Center of Attraction */}
+          <div className="bk-hero-logo-stage-artisan">
+            <img
+              src="/artisan-glowing-logo-clean.png"
+              alt="BakeSphere Artisan Bakery - More Than Just Bakes"
+              className="bk-hero-master-logo-img"
+            />
           </div>
 
-          {/* Minimal 3-Badge Highlight Ribbon */}
-          <div className="bk-hero-features-ribbon">
-            <div className="bk-hero-feature-chip">
-              <span className="bk-hero-chip-icon">🥐</span>
-              <span>Fresh Batch Daily</span>
+          {/* 4-Pill Feature Capsule Glass Card */}
+          <div className="bk-hero-features-capsule">
+            <div className="bk-hero-capsule-item">
+              <span className="bk-hero-capsule-icon">🍞</span>
+              <span className="bk-hero-capsule-label">Fresh<br/>Batch Daily</span>
             </div>
-            <div className="bk-hero-feature-chip">
-              <span className="bk-hero-chip-icon">🎂</span>
-              <span>3D Cake Studio</span>
+            <div className="bk-hero-capsule-item">
+              <span className="bk-hero-capsule-icon">🎂</span>
+              <span className="bk-hero-capsule-label">3D Cake<br/>Studio</span>
             </div>
-            <div className="bk-hero-feature-chip">
-              <span className="bk-hero-chip-icon">⚡</span>
-              <span>Smart POS & FEFO</span>
+            <div className="bk-hero-capsule-item">
+              <span className="bk-hero-capsule-icon">🧑‍🍳</span>
+              <span className="bk-hero-capsule-label">Custom<br/>Creations</span>
+            </div>
+            <div className="bk-hero-capsule-item">
+              <span className="bk-hero-capsule-icon">🍃</span>
+              <span className="bk-hero-capsule-label">100%<br/>Pure Veg</span>
             </div>
           </div>
 
-          {/* Symmetrical Artisan Hallmark Footer */}
-          <div className="bk-hero-footer-hallmark">
-            <span className="bk-hero-hallmark-sparkle">✦</span>
-            <span>Master Patisserie • Cloud Kitchen ERP</span>
-            <span className="bk-hero-hallmark-sparkle">✦</span>
+          {/* Whimsical Handwritten Tagline */}
+          <div className="bk-hero-smile-script">
+            <span>Bakes that make you smile ♡</span>
+          </div>
+
+          {/* Bottom Category Bar */}
+          <div className="bk-hero-bottom-pills-row">
+            <button type="button" onClick={() => onNavigateTab && onNavigateTab("shop")} className="bk-hero-cat-tag">🎂 Cakes</button>
+            <span className="bk-hero-cat-sep">|</span>
+            <button type="button" onClick={() => onNavigateTab && onNavigateTab("shop")} className="bk-hero-cat-tag">☕ Breads</button>
+            <span className="bk-hero-cat-sep">|</span>
+            <button type="button" onClick={() => onNavigateTab && onNavigateTab("shop")} className="bk-hero-cat-tag">🥐 Pastries</button>
+            <span className="bk-hero-cat-sep">|</span>
+            <button type="button" onClick={() => onNavigateTab && onNavigateTab("shop")} className="bk-hero-cat-tag">🍪 Desserts</button>
+            <span className="bk-hero-cat-sep">|</span>
+            <span className="bk-hero-cat-tag">♡ Happiness</span>
           </div>
         </div>
 
@@ -611,17 +715,17 @@ export const AuthPortal = ({ onNavigateTab }) => {
         <div className="bk-auth-v2-form-section">
           {/* Header */}
           <div className="bk-auth-v2-form-brand-header">
-            <div className="bk-auth-form-badge">
-              <span className="bk-auth-form-badge-sparkle">✦</span>
-              <span>Identity & Access Portal</span>
+            <div className="bk-auth-handwritten-title-wrap">
+              <span className="bk-auth-doodle-sparkle">彡</span>
+              <h2 className="bk-auth-handwritten-title">
+                {authMode === "login"
+                  ? "Welcome Back!!"
+                  : authMode === "verify"
+                  ? "Verify Account"
+                  : "Welcome New Baker!"}
+              </h2>
+              <span className="bk-auth-doodle-heart">♡</span>
             </div>
-            <h2 className="bk-auth-v2-form-brand-name">
-              {authMode === "login"
-                ? "Welcome Back"
-                : authMode === "verify"
-                ? "Verify Account"
-                : "Create Account"}
-            </h2>
             <p className="bk-auth-v2-form-brand-sub">
               {authMode === "login"
                 ? "Sign in to access your orders, bakery ERP & POS terminal"
@@ -631,40 +735,43 @@ export const AuthPortal = ({ onNavigateTab }) => {
             </p>
           </div>
 
-          {/* Symmetrical Segmented Switcher */}
-          <div className="bk-auth-v2-switcher" style={{ marginBottom: "1.5rem" }}>
+          {/* Segmented Switcher */}
+          <div className="bk-auth-artisan-switcher">
             <button
               type="button"
-              className={`bk-auth-v2-switch-btn ${authMode === "login" ? "active" : ""}`}
+              className={`bk-auth-artisan-switch-btn ${authMode === "login" ? "active" : ""}`}
               onClick={() => {
                 setAuthMode("login");
                 if (setAuthError) setAuthError("");
                 setSuccessMsg("");
               }}
             >
-              Sign In
+              <span className="bk-auth-switch-icon">☕</span>
+              <span>Sign In</span>
             </button>
             <button
               type="button"
-              className={`bk-auth-v2-switch-btn ${authMode === "register" ? "active" : ""}`}
+              className={`bk-auth-artisan-switch-btn ${authMode === "register" ? "active" : ""}`}
               onClick={() => {
                 setAuthMode("register");
                 if (setAuthError) setAuthError("");
                 setSuccessMsg("");
               }}
             >
-              Register
+              <span className="bk-auth-switch-icon">👤</span>
+              <span>Register</span>
             </button>
             {verificationEmail && (
               <button
                 type="button"
-                className={`bk-auth-v2-switch-btn ${authMode === "verify" ? "active" : ""}`}
+                className={`bk-auth-artisan-switch-btn ${authMode === "verify" ? "active" : ""}`}
                 onClick={() => {
                   setAuthMode("verify");
                   if (setAuthError) setAuthError("");
                 }}
               >
-                Verify Email
+                <span className="bk-auth-switch-icon">✉️</span>
+                <span>Verify</span>
               </button>
             )}
           </div>
@@ -681,40 +788,50 @@ export const AuthPortal = ({ onNavigateTab }) => {
             </div>
           )}
 
-          {/* ══════════ MODE 1: MINIMAL CREDENTIAL LOGIN ══════════ */}
+          {/* ══════════ MODE 1: LOGIN (EXACT MATCH TO REFERENCE) ══════════ */}
           {authMode === "login" && (
             <form onSubmit={handleLoginSubmit} className="bk-auth-v2-form">
-              <div className="bk-auth-v2-input-group">
-                <label className="bk-auth-v2-label">Email or Staff ID</label>
-                <div className="bk-auth-v2-input-wrapper">
-                  <span className="bk-auth-v2-input-icon">✉️</span>
+              <div className="bk-auth-field-group">
+                <label className="bk-auth-field-label">Email or Staff ID</label>
+                <div className="bk-auth-input-pill-wrap">
+                  <span className="bk-auth-input-lead-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect width="20" height="16" x="2" y="4" rx="2"/>
+                      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                    </svg>
+                  </span>
                   <input
                     type="email"
-                    className="bk-auth-v2-input"
+                    className="bk-auth-artisan-input"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@bakesphere.com"
+                    placeholder="admin@bakesphere.com"
                     required
                   />
                 </div>
               </div>
 
-              <div className="bk-auth-v2-input-group">
-                <div className="bk-auth-v2-label-row">
-                  <label className="bk-auth-v2-label">Password</label>
+              <div className="bk-auth-field-group">
+                <div className="bk-auth-field-label-row">
+                  <label className="bk-auth-field-label">Password</label>
                   <button
                     type="button"
-                    className="bk-auth-v2-toggle-pwd"
+                    className="bk-auth-toggle-pwd-btn"
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? "Hide" : "Show"}
                   </button>
                 </div>
-                <div className="bk-auth-v2-input-wrapper">
-                  <span className="bk-auth-v2-input-icon">🔒</span>
+                <div className="bk-auth-input-pill-wrap">
+                  <span className="bk-auth-input-lead-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    </svg>
+                  </span>
                   <input
                     type={showPassword ? "text" : "password"}
-                    className="bk-auth-v2-input"
+                    className="bk-auth-artisan-input"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
@@ -723,23 +840,53 @@ export const AuthPortal = ({ onNavigateTab }) => {
                 </div>
               </div>
 
-              <button
-                type="submit"
-                className="bk-auth-v2-submit-btn"
-                disabled={loading}
-                style={{ marginTop: "0.5rem" }}
-              >
-                {loading ? "Signing In..." : "Sign In →"}
-              </button>
-
-              <div className="bk-auth-v2-divider" style={{ margin: "1.2rem 0" }}>
-                <span>or</span>
+              <div className="bk-auth-utility-row">
+                <label className="bk-auth-remember-check">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                  />
+                  <span>Remember me</span>
+                </label>
+                <button
+                  type="button"
+                  className="bk-auth-forgot-pwd-link"
+                  onClick={() => {
+                    setEmail("admin@bakesphere.com");
+                    setPassword("Bakery@2026");
+                    setSuccessMsg("Filled default administrative credentials.");
+                  }}
+                >
+                  Forgot password?
+                </button>
               </div>
 
-              {/* Continue with Google button (triggers interactive account chooser) */}
+              <button
+                type="submit"
+                className="bk-auth-burgundy-pill-btn"
+                disabled={loading}
+              >
+                <span className="bk-auth-btn-text">
+                  {loading ? "Signing In..." : "Sign In →"}
+                </span>
+                <span className="bk-auth-btn-chef-hat">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M6 13.8a4.5 4.5 0 1 1 2.6-6.6 4.5 4.5 0 0 1 6.8 0 4.5 4.5 0 1 1 2.6 6.6"/>
+                    <path d="M6 17h12v4H6z"/>
+                    <path d="M6 14h12"/>
+                  </svg>
+                </span>
+              </button>
+
+              <div className="bk-auth-divider-or">
+                <span>OR</span>
+              </div>
+
+              {/* Continue with Google button */}
               <button
                 type="button"
-                className="bk-auth-v2-google-btn"
+                className="bk-auth-google-pill-btn"
                 onClick={openGoogleModal}
                 disabled={loading}
               >
@@ -752,16 +899,18 @@ export const AuthPortal = ({ onNavigateTab }) => {
                 <span>Continue with Google</span>
               </button>
 
-              <div className="bk-auth-v2-footer-hint">
+              <div className="bk-auth-bottom-hint">
                 Don't have an account?{" "}
                 <button
                   type="button"
                   onClick={() => setAuthMode("register")}
-                  className="bk-auth-v2-link-btn"
+                  className="bk-auth-bottom-link"
                 >
                   Create one
                 </button>
               </div>
+
+
             </form>
           )}
 
@@ -991,6 +1140,114 @@ export const AuthPortal = ({ onNavigateTab }) => {
               </div>
             </form>
           )}
+        </div>
+      </div>
+
+      {/* ══════════ PATRON REVIEWS & TASTY EXPERIENCES ══════════ */}
+      <div
+        style={{
+          position: "relative",
+          zIndex: 10,
+          maxWidth: "1020px",
+          width: "100%",
+          margin: "2.5rem auto 3rem",
+          padding: "0 1.25rem"
+        }}
+      >
+        <div style={{ textAlign: "center", marginBottom: "1.4rem" }}>
+          <span style={{ fontSize: "0.8rem", fontWeight: 700, letterSpacing: "0.08em", color: "var(--gold-400, #fbbf24)", textTransform: "uppercase" }}>
+            ⭐ Loved By Patisserie Aficionados
+          </span>
+          <h4 style={{ margin: "0.2rem 0 0", fontSize: "1.15rem", color: "#ffffff", fontWeight: 700 }}>
+            Real Patron Experiences
+          </h4>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))",
+            gap: "1.2rem"
+          }}
+        >
+          {[
+            {
+              name: "Pooja Hegde",
+              role: "Verified Connoisseur",
+              avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80",
+              review: "The 3D Custom Hazelnut Truffle cake for our wedding anniversary was jaw-dropping! Perfectly balanced Belgian ganache.",
+              treatImg: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=300&auto=format&fit=crop&q=80",
+              treatName: "Royal Truffle Tier",
+              rating: "⭐⭐⭐⭐⭐"
+            },
+            {
+              name: "Vikram Malhotra",
+              role: "Artisan Bread Enthusiast",
+              avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80",
+              review: "Heritage Sourdough is crispy, airy, and naturally fermented to perfection. BakeSphere is on another level.",
+              treatImg: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=300&auto=format&fit=crop&q=80",
+              treatName: "Wild Sourdough Boule",
+              rating: "⭐⭐⭐⭐⭐"
+            },
+            {
+              name: "Ananya Deshmukh",
+              role: "Corporate Event Host",
+              avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80",
+              review: "Ordered 50 custom gift boxes with edible branded plaques. Arrived warm and fresh right on time!",
+              treatImg: "https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?w=300&auto=format&fit=crop&q=80",
+              treatName: "Artisan Macaron Box",
+              rating: "⭐⭐⭐⭐⭐"
+            }
+          ].map((item, idx) => (
+            <div
+              key={idx}
+              style={{
+                background: "rgba(18, 22, 34, 0.75)",
+                backdropFilter: "blur(12px)",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                borderRadius: "14px",
+                padding: "1rem",
+                display: "flex",
+                gap: "0.9rem",
+                alignItems: "center",
+                boxShadow: "0 10px 25px rgba(0, 0, 0, 0.35)"
+              }}
+            >
+              <div style={{ position: "relative", flexShrink: 0 }}>
+                <img
+                  src={item.treatImg}
+                  alt={item.treatName}
+                  onError={handleImageError}
+                  style={{
+                    width: "68px",
+                    height: "68px",
+                    borderRadius: "10px",
+                    objectFit: "cover",
+                    border: "1.5px solid rgba(255, 255, 255, 0.15)"
+                  }}
+                />
+              </div>
+
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.2rem" }}>
+                  <span style={{ fontSize: "0.72rem", color: "#fbbf24" }}>{item.rating}</span>
+                  <span style={{ fontSize: "0.68rem", color: "#94a3b8" }}>{item.role}</span>
+                </div>
+                <p style={{ margin: "0 0 0.4rem", fontSize: "0.78rem", color: "#e2e8f0", lineHeight: 1.35, fontStyle: "italic" }}>
+                  "{item.review}"
+                </p>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                  <img
+                    src={item.avatar}
+                    alt={item.name}
+                    onError={handleImageError}
+                    style={{ width: "18px", height: "18px", borderRadius: "50%", objectFit: "cover" }}
+                  />
+                  <strong style={{ fontSize: "0.74rem", color: "#ffffff" }}>{item.name}</strong>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
