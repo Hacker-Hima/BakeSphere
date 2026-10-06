@@ -1,7 +1,27 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export const BillModal = ({ bill, isOpen, onClose }) => {
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleBeforePrint = () => {
+      document.body.classList.add("printing-bill");
+    };
+    const handleAfterPrint = () => {
+      document.body.classList.remove("printing-bill");
+    };
+
+    window.addEventListener("beforeprint", handleBeforePrint);
+    window.addEventListener("afterprint", handleAfterPrint);
+
+    return () => {
+      document.body.classList.remove("printing-bill");
+      window.removeEventListener("beforeprint", handleBeforePrint);
+      window.removeEventListener("afterprint", handleAfterPrint);
+    };
+  }, [isOpen]);
 
   if (!isOpen || !bill) return null;
 
@@ -14,7 +34,20 @@ export const BillModal = ({ bill, isOpen, onClose }) => {
   };
 
   const handlePrint = () => {
+    const originalTitle = document.title;
+    const invNum = bill.invoiceNumber || `INV-${bill.orderId || "BS"}`;
+    document.title = `BakeSphere_Invoice_${invNum}`;
+    document.body.classList.add("printing-bill");
+
+    const cleanup = () => {
+      document.title = originalTitle;
+      document.body.classList.remove("printing-bill");
+      window.removeEventListener("afterprint", cleanup);
+    };
+
+    window.addEventListener("afterprint", cleanup);
     window.print();
+    setTimeout(cleanup, 2500);
   };
 
   const items = bill.items || [];
@@ -62,6 +95,7 @@ export const BillModal = ({ bill, isOpen, onClose }) => {
       >
         {/* Top Action Header Bar */}
         <div
+          className="bk-bill-modal-header bk-bill-no-print"
           style={{
             padding: "1rem 1.4rem",
             background: "linear-gradient(135deg, #be123c 0%, #881337 100%)",
@@ -132,6 +166,7 @@ export const BillModal = ({ bill, isOpen, onClose }) => {
         {/* Printable Bill Paper Content */}
         <div
           id="bakesphere-printable-bill"
+          className="bk-bill-printable"
           style={{
             padding: "1.5rem",
             overflowY: "auto",
@@ -142,9 +177,10 @@ export const BillModal = ({ bill, isOpen, onClose }) => {
           }}
         >
           {/* Store Brand & GST Header */}
-          <div style={{ textAlign: "center", borderBottom: "1.5px dashed #cbd5e1", paddingBottom: "1.2rem", marginBottom: "1.2rem" }}>
+          <div className="bk-bill-header" style={{ textAlign: "center", borderBottom: "1.5px dashed #cbd5e1", paddingBottom: "1.2rem", marginBottom: "1.2rem" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.85rem" }}>
               <div
+                className="bk-bill-logo-box"
                 style={{
                   width: "130px",
                   height: "60px",
@@ -169,20 +205,20 @@ export const BillModal = ({ bill, isOpen, onClose }) => {
             <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.06em", marginTop: "2px" }}>
               Artisanal Patisserie & Smart Kitchen ERP
             </div>
-            <div style={{ fontSize: "0.74rem", color: "#64748b", marginTop: "4px" }}>
+            <div className="bk-bill-header-text" style={{ fontSize: "0.74rem", color: "#64748b", marginTop: "4px" }}>
               {bill.branchAddress || "Heritage Main Hub, 42 Venkatnarayana Rd, T. Nagar, Chennai 600017"}
             </div>
-            <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "2px" }}>
+            <div className="bk-bill-header-text" style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "2px" }}>
               Tel: {bill.phone || "+91 44 2434 8890"} • Email: care@bakesphere.com
             </div>
-            <div style={{ display: "flex", justifyContent: "center", gap: "1.2rem", fontSize: "0.72rem", fontWeight: 700, color: "#334155", marginTop: "6px" }}>
+            <div className="bk-bill-header-text" style={{ display: "flex", justifyContent: "center", gap: "1.2rem", fontSize: "0.72rem", fontWeight: 700, color: "#334155", marginTop: "6px" }}>
               <span>GSTIN: {bill.gstin || "33AABCB1234E1Z0"}</span>
               <span>FSSAI: {bill.fssaiLicense || "12423008000451"}</span>
             </div>
           </div>
 
           {/* Invoice Meta Grid */}
-          <div style={{
+          <div className="bk-bill-meta-grid" style={{
             background: "#f8fafc",
             border: "1px solid #e2e8f0",
             borderRadius: "12px",
@@ -199,6 +235,7 @@ export const BillModal = ({ bill, isOpen, onClose }) => {
                 <span>{bill.invoiceNumber || `INV-${bill.orderId}`}</span>
                 <button
                   type="button"
+                  className="bk-bill-no-print"
                   onClick={handleCopyInvoiceNumber}
                   style={{
                     background: "none",
@@ -256,7 +293,7 @@ export const BillModal = ({ bill, isOpen, onClose }) => {
             )}
 
             {bill.customDetails && (
-              <div style={{
+              <div className="bk-bill-custom-specs" style={{
                 gridColumn: "1 / -1",
                 borderTop: "1.5px dashed #fbcfe8",
                 paddingTop: "0.6rem",
@@ -266,7 +303,7 @@ export const BillModal = ({ bill, isOpen, onClose }) => {
                   <span>🎂</span>
                   <span>Artisan Custom Cake Architectural Specifications</span>
                 </div>
-                <div style={{
+                <div className="bk-bill-custom-specs-grid" style={{
                   display: "grid",
                   gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
                   gap: "0.45rem",
@@ -297,8 +334,8 @@ export const BillModal = ({ bill, isOpen, onClose }) => {
           </div>
 
           {/* Itemized Table */}
-          <div style={{ marginBottom: "1.2rem", overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem", textAlign: "left" }}>
+          <div className="bk-bill-table-wrap" style={{ marginBottom: "1.2rem", overflowX: "auto" }}>
+            <table className="bk-bill-table" style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem", textAlign: "left" }}>
               <thead>
                 <tr style={{ background: "#f1f5f9", borderBottom: "2px solid #cbd5e1", color: "#475569" }}>
                   <th style={{ padding: "0.6rem 0.5rem", fontWeight: 700 }}>#</th>
@@ -342,12 +379,12 @@ export const BillModal = ({ bill, isOpen, onClose }) => {
           </div>
 
           {/* Pricing & GST Totals Calculation Card */}
-          <div style={{
+          <div className="bk-bill-totals-wrap" style={{
             display: "flex",
             justifyContent: "flex-end",
             marginBottom: "1.2rem"
           }}>
-            <div style={{ width: "280px", display: "flex", flexDirection: "column", gap: "0.35rem", fontSize: "0.8rem" }}>
+            <div className="bk-bill-totals-box" style={{ width: "280px", display: "flex", flexDirection: "column", gap: "0.35rem", fontSize: "0.8rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between", color: "#64748b" }}>
                 <span>Items Subtotal:</span>
                 <span style={{ fontWeight: 700, color: "#1e293b" }}>₹{Number(subtotal).toFixed(2)}</span>
@@ -382,7 +419,7 @@ export const BillModal = ({ bill, isOpen, onClose }) => {
                 <span>₹{Number(sgst).toFixed(2)}</span>
               </div>
 
-              <div style={{
+              <div className="bk-bill-total-highlight" style={{
                 borderTop: "2px solid #be123c",
                 paddingTop: "0.5rem",
                 marginTop: "0.2rem",
@@ -396,7 +433,7 @@ export const BillModal = ({ bill, isOpen, onClose }) => {
 
               {bill.customDetails?.advancePaid !== undefined && (
                 <>
-                  <div style={{
+                  <div className="bk-bill-advance-box" style={{
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
@@ -412,7 +449,7 @@ export const BillModal = ({ bill, isOpen, onClose }) => {
                     <span>₹{Number(bill.customDetails.advancePaid).toFixed(2)}</span>
                   </div>
 
-                  <div style={{
+                  <div className="bk-bill-balance-box" style={{
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
@@ -433,7 +470,7 @@ export const BillModal = ({ bill, isOpen, onClose }) => {
           </div>
 
           {/* Verification Barcode & QR Code Footer */}
-          <div style={{
+          <div className="bk-bill-footer-stamp" style={{
             borderTop: "1.5px dashed #cbd5e1",
             paddingTop: "1rem",
             display: "flex",
@@ -442,7 +479,7 @@ export const BillModal = ({ bill, isOpen, onClose }) => {
             gap: "1rem"
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: "0.8rem" }}>
-              <div style={{
+              <div className="bk-bill-qr-box" style={{
                 width: "60px",
                 height: "60px",
                 background: "#f1f5f9",
@@ -463,7 +500,7 @@ export const BillModal = ({ bill, isOpen, onClose }) => {
             </div>
 
             <div style={{ textAlign: "right" }}>
-              <div style={{
+              <div className="bk-bill-dispatched-badge" style={{
                 display: "inline-block",
                 border: "1px solid #22c55e",
                 background: "#f0fdf4",
@@ -484,7 +521,9 @@ export const BillModal = ({ bill, isOpen, onClose }) => {
         </div>
 
         {/* Footer Actions */}
-        <div style={{
+        <div
+          className="bk-bill-modal-footer bk-bill-no-print"
+          style={{
           padding: "0.85rem 1.4rem",
           background: "#f8fafc",
           borderTop: "1px solid #e2e8f0",

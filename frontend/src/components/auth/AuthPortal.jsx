@@ -663,38 +663,41 @@ export const AuthPortal = ({ onNavigateTab }) => {
             </div>
           </div>
 
-          {/* Center Master Logo as the Center of Attraction */}
-          <div className="bk-hero-logo-stage-artisan">
-            <img
-              src="/artisan-glowing-logo-clean.png"
-              alt="BakeSphere Artisan Bakery - More Than Just Bakes"
-              className="bk-hero-master-logo-img"
-            />
-          </div>
+          {/* Centralized Brand & Features Showcase */}
+          <div className="bk-hero-artisan-center-content">
+            {/* Center Master Logo as the Center of Attraction */}
+            <div className="bk-hero-logo-stage-artisan">
+              <img
+                src="/artisan-glowing-logo-clean.png"
+                alt="BakeSphere Artisan Bakery - More Than Just Bakes"
+                className="bk-hero-master-logo-img"
+              />
+            </div>
 
-          {/* 4-Pill Feature Capsule Glass Card */}
-          <div className="bk-hero-features-capsule">
-            <div className="bk-hero-capsule-item">
-              <span className="bk-hero-capsule-icon">🍞</span>
-              <span className="bk-hero-capsule-label">Fresh<br/>Batch Daily</span>
+            {/* 4-Pill Feature Capsule Glass Card */}
+            <div className="bk-hero-features-capsule">
+              <div className="bk-hero-capsule-item">
+                <span className="bk-hero-capsule-icon">🍞</span>
+                <span className="bk-hero-capsule-label">Fresh<br/>Batch Daily</span>
+              </div>
+              <div className="bk-hero-capsule-item">
+                <span className="bk-hero-capsule-icon">🎂</span>
+                <span className="bk-hero-capsule-label">3D Cake<br/>Studio</span>
+              </div>
+              <div className="bk-hero-capsule-item">
+                <span className="bk-hero-capsule-icon">🧑‍🍳</span>
+                <span className="bk-hero-capsule-label">Custom<br/>Creations</span>
+              </div>
+              <div className="bk-hero-capsule-item">
+                <span className="bk-hero-capsule-icon">🍃</span>
+                <span className="bk-hero-capsule-label">100%<br/>Pure Veg</span>
+              </div>
             </div>
-            <div className="bk-hero-capsule-item">
-              <span className="bk-hero-capsule-icon">🎂</span>
-              <span className="bk-hero-capsule-label">3D Cake<br/>Studio</span>
-            </div>
-            <div className="bk-hero-capsule-item">
-              <span className="bk-hero-capsule-icon">🧑‍🍳</span>
-              <span className="bk-hero-capsule-label">Custom<br/>Creations</span>
-            </div>
-            <div className="bk-hero-capsule-item">
-              <span className="bk-hero-capsule-icon">🍃</span>
-              <span className="bk-hero-capsule-label">100%<br/>Pure Veg</span>
-            </div>
-          </div>
 
-          {/* Whimsical Handwritten Tagline */}
-          <div className="bk-hero-smile-script">
-            <span>Bakes that make you smile ♡</span>
+            {/* Whimsical Handwritten Tagline */}
+            <div className="bk-hero-smile-script">
+              <span>Bakes that make you smile ♡</span>
+            </div>
           </div>
 
           {/* Bottom Category Bar */}

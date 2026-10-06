@@ -16,7 +16,7 @@ export const SettingsDrawer = () => {
   } = useThemeSettings();
 
   const { language, setLanguage, t } = useLanguage();
-  const { currentUser, logout, switchDemoRole } = useAuth();
+  const { currentUser, logout } = useAuth();
   const [activeTab, setActiveTab] = useState("appearance"); // "appearance" | "typography" | "sensory" | "ordering" | "operations" | "account"
   const [toastMessage, setToastMessage] = useState("");
   const [previewText, setPreviewText] = useState("Fresh Belgian Chocolate Truffle & Warm Butter Croissants");
@@ -264,14 +264,6 @@ export const SettingsDrawer = () => {
     { id: "58mm", label: "58mm Slip", desc: "Pocket thermal Bluetooth printer" },
     { id: "80mm", label: "80mm Standard POS", desc: "High-speed front counter EPSON roll" },
     { id: "A4", label: "A4 Executive GST Sheet", desc: "Full-page archival legal tax invoice" }
-  ];
-
-  const demoRoles = [
-    { role: "customer", label: "Guest / Customer", icon: "🛍️", desc: "Storefront shopping & 3D custom cake studio" },
-    { role: "chef", label: "Chef Pierre", icon: "👨‍🍳", desc: "Bakery prep, recipe scaler & ingredients pipeline" },
-    { role: "head_chef", label: "Head Chef Laurent", icon: "⭐", desc: "Quality assurance & kitchen production queue" },
-    { role: "manager", label: "Store Manager", icon: "👔", desc: "POS billing, inventory restock & staff metrics" },
-    { role: "admin", label: "Master Admin", icon: "👑", desc: "Full executive suite, P&L analytics & audit logs" }
   ];
 
   return (
@@ -1476,71 +1468,10 @@ export const SettingsDrawer = () => {
           {/* ═══════════ TAB 6: ACCOUNT, SECURITY & DATA ═══════════ */}
           {activeTab === "account" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.3rem" }}>
-              {/* Role Switcher Demo */}
-              <div>
-                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "0.5rem" }}>
-                  1. One-Click Role Simulator ({demoRoles.length} Permissions)
-                </label>
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem" }}>
-                  {demoRoles.map((r) => {
-                    const isCurrentRole = currentUser?.role === r.role;
-                    return (
-                      <div
-                        key={r.role}
-                        onClick={() => {
-                          if (switchDemoRole) {
-                            switchDemoRole(r.role);
-                            showToast(`Switched active role to ${r.label}`);
-                            playChime("success");
-                          }
-                        }}
-                        style={{
-                          padding: "0.65rem 0.85rem",
-                          borderRadius: "10px",
-                          border: isCurrentRole ? "2px solid var(--crimson-500)" : "1px solid var(--border-subtle)",
-                          background: isCurrentRole ? "rgba(225, 29, 72, 0.08)" : "rgba(0,0,0,0.02)",
-                          cursor: "pointer",
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center"
-                        }}
-                      >
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-                          <span style={{ fontSize: "1.2rem" }}>{r.icon}</span>
-                          <div>
-                            <div style={{ fontSize: "0.84rem", fontWeight: 700, color: isCurrentRole ? "var(--crimson-500)" : "var(--text-primary)" }}>
-                              {r.label}
-                            </div>
-                            <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>{r.desc}</div>
-                          </div>
-                        </div>
-                        {isCurrentRole ? (
-                          <span style={{ color: "var(--crimson-500)", fontWeight: 800, fontSize: "0.74rem" }}>● ACTIVE</span>
-                        ) : (
-                          <button
-                            type="button"
-                            style={{
-                              background: "rgba(0,0,0,0.05)",
-                              border: "none",
-                              borderRadius: "4px",
-                              padding: "0.2rem 0.5rem",
-                              fontSize: "0.7rem",
-                              cursor: "pointer"
-                            }}
-                          >
-                            Switch
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
               {/* Maintenance & Data Management */}
               <div>
                 <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "0.5rem" }}>
-                  2. Cache, Backups & Maintenance
+                  Cache, Backups & Maintenance
                 </label>
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                   <button
