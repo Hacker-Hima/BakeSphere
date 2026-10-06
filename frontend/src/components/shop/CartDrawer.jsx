@@ -4,6 +4,7 @@ import { handleImageError, getSafeImageUrl } from "../../utils/imageFallback.js"
 import { useLanguage } from "../../context/LanguageContext.jsx";
 import { useNotifications } from "../../context/NotificationContext.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
+import { RazorpayPaymentModal } from "./RazorpayPaymentModal.jsx";
 
 export const CartDrawer = ({
   isOpen,
@@ -63,19 +64,61 @@ export const CartDrawer = ({
     }
   };
 
-  const handleCheckout = () => {
-    if (cart.length === 0) return;
+  const [isRazorpayOpen, setIsRazorpayOpen] = useState(false);
+  const [pendingInvoice, setPendingInvoice] = useState(null);
+  const [paymentMode, setPaymentMode] = useState("razorpay"); // "razorpay" | "cod"
 
+  const finalizeOrder = (invoiceData, razorpayDetails = null) => {
     // Trigger celebration confetti
     try {
       confetti({
-        particleCount: 120,
-        spread: 70,
+        particleCount: 140,
+        spread: 80,
         origin: { y: 0.6 }
       });
     } catch {
       // safe fallback
     }
+
+    // Save to local invoices list
+    try {
+      const savedInvoices = JSON.parse(localStorage.getItem("bakesphere_invoices") || "[]");
+      localStorage.setItem("bakesphere_invoices", JSON.stringify([invoiceData, ...savedInvoices]));
+    } catch (e) {
+      console.error(e);
+    }
+
+    // Inform backend asynchronously
+    fetch("http://localhost:5000/api/pos/online-order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(invoiceData)
+    }).catch(() => {
+      // offline safe
+    });
+
+    // Add to user notifications
+    addNotification({
+      title: razorpayDetails ? "Razorpay Payment Verified! 🛡️" : "Order Placed & Invoiced! 🧾",
+      message: razorpayDetails
+        ? `Invoice #${invoiceData.invoiceNumber} paid via Razorpay (${razorpayDetails.paymentId})`
+        : `Tax Invoice #${invoiceData.invoiceNumber} for ₹${invoiceData.grandTotal} generated.`,
+      type: "bill",
+      invoice: invoiceData
+    });
+
+    setPlacedOrderId(invoiceData.orderId);
+    setLastInvoice(invoiceData);
+    setOrderPlaced(true);
+    setIsRazorpayOpen(false);
+    onClearCart();
+
+    // Immediately pop open the Tax Invoice Bill Modal!
+    openBill(invoiceData);
+  };
+
+  const handleCheckout = () => {
+    if (cart.length === 0) return;
 
     const newOrderId = `BS-${Date.now().toString().slice(-6)}`;
     const invoiceNumber = `INV-${newOrderId}`;
@@ -120,47 +163,21 @@ export const CartDrawer = ({
       sgst,
       totalGst,
       grandTotal,
-      paymentMethod: "UPI / Instant Pay",
-      paymentStatus: "PAID / SUCCESS",
-      transactionRef: `TXN-UPI-${Date.now().toString().slice(-8)}`,
+      paymentMethod: paymentMode === "razorpay" ? "Razorpay (UPI / NetBanking / Cards)" : "Cash on Delivery",
+      paymentStatus: paymentMode === "razorpay" ? "PENDING_VERIFICATION" : "PENDING (COD)",
+      transactionRef: `TXN-${paymentMode.toUpperCase()}-${Date.now().toString().slice(-8)}`,
       status: "confirmed",
       orderDate: now.toLocaleDateString("en-IN"),
       orderTime: now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
       createdAt: now.toISOString()
     };
 
-    // Save to local invoices list
-    try {
-      const savedInvoices = JSON.parse(localStorage.getItem("bakesphere_invoices") || "[]");
-      localStorage.setItem("bakesphere_invoices", JSON.stringify([invoiceData, ...savedInvoices]));
-    } catch (e) {
-      console.error(e);
+    if (paymentMode === "razorpay") {
+      setPendingInvoice(invoiceData);
+      setIsRazorpayOpen(true);
+    } else {
+      finalizeOrder(invoiceData);
     }
-
-    // Inform backend asynchronously
-    fetch("http://localhost:5000/api/pos/online-order", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(invoiceData)
-    }).catch(() => {
-      // offline safe
-    });
-
-    // Add to user notifications
-    addNotification({
-      title: "Order Placed & Invoiced! 🧾",
-      message: `Tax Invoice #${invoiceNumber} for ₹${grandTotal} generated.`,
-      type: "bill",
-      invoice: invoiceData
-    });
-
-    setPlacedOrderId(newOrderId);
-    setLastInvoice(invoiceData);
-    setOrderPlaced(true);
-    onClearCart();
-
-    // Immediately pop open the Tax Invoice Bill Modal!
-    openBill(invoiceData);
   };
 
   return (
@@ -460,24 +477,125 @@ export const CartDrawer = ({
                   )}
                 </div>
 
+                {/* Payment Gateway Selector */}
+                <div style={{ margin: "0.8rem 0 0.5rem" }}>
+                  <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "0.4rem" }}>
+                    Select Payment Method:
+                  </label>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem" }}>
+                    <div
+                      onClick={() => setPaymentMode("razorpay")}
+                      style={{
+                        padding: "0.65rem 0.85rem",
+                        borderRadius: "10px",
+                        border: paymentMode === "razorpay" ? "2px solid #2563eb" : "1px solid var(--border-subtle)",
+                        background: paymentMode === "razorpay" ? "rgba(37, 99, 235, 0.08)" : "rgba(0,0,0,0.02)",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between"
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                        <span style={{ fontSize: "1.2rem" }}>🛡️</span>
+                        <div>
+                          <div style={{ fontSize: "0.84rem", fontWeight: 800, color: paymentMode === "razorpay" ? "#1e40af" : "var(--text-primary)" }}>
+                            Razorpay Verified Gateway
+                          </div>
+                          <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                            UPI (GPay / PhonePe), Cards & NetBanking
+                          </div>
+                        </div>
+                      </div>
+                      <span style={{
+                        fontSize: "0.68rem",
+                        background: paymentMode === "razorpay" ? "#2563eb" : "#cbd5e1",
+                        color: "#ffffff",
+                        padding: "0.15rem 0.45rem",
+                        borderRadius: "999px",
+                        fontWeight: 700
+                      }}>
+                        {paymentMode === "razorpay" ? "● RECOMMENDED" : "SELECT"}
+                      </span>
+                    </div>
+
+                    <div
+                      onClick={() => setPaymentMode("cod")}
+                      style={{
+                        padding: "0.65rem 0.85rem",
+                        borderRadius: "10px",
+                        border: paymentMode === "cod" ? "2px solid var(--crimson-500)" : "1px solid var(--border-subtle)",
+                        background: paymentMode === "cod" ? "rgba(225, 29, 72, 0.08)" : "rgba(0,0,0,0.02)",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between"
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                        <span style={{ fontSize: "1.2rem" }}>💵</span>
+                        <div>
+                          <div style={{ fontSize: "0.84rem", fontWeight: 700, color: paymentMode === "cod" ? "var(--crimson-500)" : "var(--text-primary)" }}>
+                            Cash on Delivery (COD)
+                          </div>
+                          <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                            Pay at doorstep upon delivery
+                          </div>
+                        </div>
+                      </div>
+                      <span style={{
+                        fontSize: "0.68rem",
+                        background: paymentMode === "cod" ? "var(--crimson-500)" : "#cbd5e1",
+                        color: "#ffffff",
+                        padding: "0.15rem 0.45rem",
+                        borderRadius: "999px",
+                        fontWeight: 700
+                      }}>
+                        {paymentMode === "cod" ? "● SELECTED" : "SELECT"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Checkout Button */}
                 <div className="bk-drawer-footer">
                   <button
                     type="button"
                     className="bk-btn-checkout"
                     onClick={handleCheckout}
+                    style={{
+                      background: paymentMode === "razorpay"
+                        ? "linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)"
+                        : "linear-gradient(135deg, #be123c 0%, #e11d48 100%)"
+                    }}
                   >
-                    <span>{t("proceedToCheckout")}</span>
+                    <span>
+                      {paymentMode === "razorpay" ? "🛡️ Pay with Razorpay" : t("proceedToCheckout")}
+                    </span>
                     <strong>₹{grandTotal} →</strong>
                   </button>
                   <div className="bk-security-note">
-                    🔒 256-Bit SSL Encrypted • FSSAI Certified Kitchens
+                    🔒 Razorpay 256-Bit SSL Encrypted • FSSAI Certified Kitchens
                   </div>
                 </div>
               </>
             )}
           </div>
         )}
+
+        {/* Razorpay Cryptographic Verification Modal */}
+        <RazorpayPaymentModal
+          isOpen={isRazorpayOpen}
+          onClose={() => setIsRazorpayOpen(false)}
+          amount={grandTotal}
+          orderDetails={pendingInvoice}
+          onPaymentSuccess={(verifiedInvoice, razorpayDetails) => {
+            finalizeOrder(verifiedInvoice, razorpayDetails);
+          }}
+          onPaymentFailure={(err) => {
+            alert(`Razorpay Payment Verification Failed: ${err}`);
+          }}
+        />
       </div>
     </div>
   );

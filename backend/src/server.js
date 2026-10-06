@@ -18,6 +18,7 @@ import auditRoutes from "./routes/auditRoutes.js";
 import branchRoutes from "./routes/branchRoutes.js";
 import bulkOrderRoutes from "./routes/bulkOrderRoutes.js";
 import reviewRoutes from "./routes/reviewRoutes.js";
+import paymentRoutes from "./routes/paymentRoutes.js";
 
 import connectDB from "./config/db.js";
 
@@ -114,6 +115,7 @@ app.use("/api/audit", auditRoutes);
 app.use("/api/branches", branchRoutes);
 app.use("/api/bulk-orders", bulkOrderRoutes);
 app.use("/api/reviews", reviewRoutes);
+app.use("/api/payment", paymentRoutes);
 
 // 404 Handler
 

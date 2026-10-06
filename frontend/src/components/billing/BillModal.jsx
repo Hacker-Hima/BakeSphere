@@ -469,6 +469,49 @@ export const BillModal = ({ bill, isOpen, onClose }) => {
             </div>
           </div>
 
+          {/* Razorpay Cryptographic Verification Stamp */}
+          {bill.razorpayDetails && (
+            <div style={{
+              margin: "0.6rem 0",
+              padding: "0.55rem 0.85rem",
+              background: "linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%)",
+              border: "1px solid #bfdbfe",
+              borderRadius: "8px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              fontSize: "0.74rem"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <span style={{ fontSize: "1.2rem" }}>🛡️</span>
+                <div>
+                  <div style={{ fontWeight: 800, color: "#1e40af" }}>
+                    Razorpay Verified Payment Gateway
+                  </div>
+                  <div style={{ fontSize: "0.68rem", color: "#475569", fontFamily: "monospace" }}>
+                    Payment ID: {bill.razorpayDetails.paymentId} • Order: {bill.razorpayDetails.orderId}
+                  </div>
+                </div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <span style={{
+                  background: "#dcfce7",
+                  color: "#15803d",
+                  padding: "0.15rem 0.5rem",
+                  borderRadius: "999px",
+                  fontWeight: 800,
+                  fontSize: "0.68rem",
+                  border: "1px solid #86efac"
+                }}>
+                  ✓ HMAC SHA-256 SIGNATURE VALID
+                </span>
+                <div style={{ fontSize: "0.64rem", color: "#64748b", marginTop: "2px" }}>
+                  256-Bit SSL Secured
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Verification Barcode & QR Code Footer */}
           <div className="bk-bill-footer-stamp" style={{
             borderTop: "1.5px dashed #cbd5e1",
