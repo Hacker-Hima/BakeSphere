@@ -19,16 +19,15 @@ export const ROLE_PERMISSIONS = {
 export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(() => {
     try {
-      return sessionStorage.getItem("bakesphere_jwt") || "";
+      return sessionStorage.getItem("bakesphere_jwt") || localStorage.getItem("bakesphere_jwt") || "";
     } catch {
       return "";
     }
   });
 
-  // Default to null on initial site load so the standalone sign in page is shown first
   const [currentUser, setCurrentUser] = useState(() => {
     try {
-      const saved = sessionStorage.getItem("bakesphere_user");
+      const saved = sessionStorage.getItem("bakesphere_user") || localStorage.getItem("bakesphere_user");
       if (saved) return JSON.parse(saved);
     } catch (e) {
       console.error(e);
@@ -38,23 +37,34 @@ export const AuthProvider = ({ children }) => {
 
   const [loading, setLoading] = useState(false);
   const [authError, setAuthError] = useState("");
+  const [branches, setBranches] = useState([
+    { id: "BR-01", name: "Heritage Main Bakery", locality: "T. Nagar, Chennai" },
+    { id: "BR-02", name: "Anna Nagar Flagship", locality: "Anna Nagar, Chennai" },
+    { id: "BR-03", name: "Koyambedu Express Hub", locality: "Koyambedu, Chennai" },
+    { id: "BR-04", name: "OMR Cloud Kitchen & Master Production", locality: "OMR, Chennai" }
+  ]);
 
-  // Save or clear session in sessionStorage & localStorage
+  useEffect(() => {
+    fetch("http://localhost:5000/api/branches")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.branches && data.branches.length > 0) {
+          setBranches(data.branches);
+        }
+      })
+      .catch((e) => console.warn("Could not load branches into AuthContext:", e));
+  }, []);
+
+  // Save session in sessionStorage & localStorage
   useEffect(() => {
     try {
       if (token) {
         sessionStorage.setItem("bakesphere_jwt", token);
         localStorage.setItem("bakesphere_jwt", token);
-      } else {
-        sessionStorage.removeItem("bakesphere_jwt");
-        localStorage.removeItem("bakesphere_jwt");
       }
       if (currentUser) {
         sessionStorage.setItem("bakesphere_user", JSON.stringify(currentUser));
         localStorage.setItem("bakesphere_user", JSON.stringify(currentUser));
-      } else {
-        sessionStorage.removeItem("bakesphere_user");
-        localStorage.removeItem("bakesphere_user");
       }
     } catch (e) {
       console.error("Storage error:", e);
@@ -345,7 +355,8 @@ export const AuthProvider = ({ children }) => {
         logout,
         activeBranchId,
         activeBranchName,
-        switchBranch
+        switchBranch,
+        branches
       }}
     >
       {children}

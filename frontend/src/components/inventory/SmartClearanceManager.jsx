@@ -2,10 +2,20 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useNotifications } from "../../context/NotificationContext.jsx";
 
+const FALLBACK_BRANCHES = [
+  { id: "BR-01", name: "Heritage Main Bakery (T. Nagar)" },
+  { id: "BR-02", name: "Anna Nagar Flagship" },
+  { id: "BR-03", name: "Koyambedu Express Hub" },
+  { id: "BR-04", name: "OMR Cloud Kitchen & Master Production" }
+];
+
 export const SmartClearanceManager = () => {
-  const { currentUser, branches, activeBranchId } = useAuth();
+  const auth = useAuth() || {};
+  const currentUser = auth.currentUser;
+  const activeBranchId = auth.activeBranchId;
   const { addNotification } = useNotifications();
 
+  const [branches, setBranches] = useState(() => (auth.branches && auth.branches.length ? auth.branches : FALLBACK_BRANCHES));
   const [clearanceItems, setClearanceItems] = useState([]);
   const [fefoSummary, setFefoSummary] = useState(null);
   const [selectedBranchId, setSelectedBranchId] = useState(activeBranchId || "BR-01");
@@ -21,8 +31,24 @@ export const SmartClearanceManager = () => {
   const [wasteQty, setWasteQty] = useState(1);
   const [wasteReason, setWasteReason] = useState("Shelf-life expired");
 
-  const isAdmin = currentUser?.role === "admin";
-  const isManager = currentUser?.role === "manager" || currentUser?.role === "branch_manager";
+  const userRole = currentUser?.role || "";
+  const isAdmin = userRole === "admin" || userRole === "super_admin" || userRole === "bakery_owner";
+  const isManager = userRole === "manager" || userRole === "branch_manager" || userRole === "bakery_owner";
+
+  useEffect(() => {
+    if (auth.branches && auth.branches.length) {
+      setBranches(auth.branches);
+    } else {
+      fetch("http://localhost:5000/api/branches")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.branches && data.branches.length > 0) {
+            setBranches(data.branches);
+          }
+        })
+        .catch((e) => console.warn("Failed to load branches in SmartClearanceManager:", e));
+    }
+  }, [auth.branches]);
 
   useEffect(() => {
     fetchClearanceData();
@@ -181,7 +207,7 @@ export const SmartClearanceManager = () => {
               }}
             >
               {isAdmin && <option value="ALL">All Branches</option>}
-              {branches.map((b) => (
+              {(branches || []).map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.name}
                 </option>

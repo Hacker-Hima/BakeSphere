@@ -128,6 +128,42 @@ export const Navbar = ({
               <span className="bk-nav-action-label">Orders</span>
             </button>
 
+            {/* Shopping Cart Drawer Trigger */}
+            <button
+              type="button"
+              className="bk-nav-action-pill-btn bk-nav-cart-btn"
+              onClick={onOpenCart}
+              title="View Shopping Cart & Checkout"
+              id="bk-nav-cart-btn"
+              style={{ position: "relative" }}
+            >
+              <span className="bk-nav-action-icon">🛒</span>
+              <span className="bk-nav-action-label">Cart</span>
+              {cartCount > 0 && (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: "-5px",
+                    right: "-5px",
+                    background: "var(--crimson-500, #e11d48)",
+                    color: "#ffffff",
+                    fontSize: "0.68rem",
+                    fontWeight: 800,
+                    borderRadius: "999px",
+                    minWidth: "18px",
+                    height: "18px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "0 4px",
+                    boxShadow: "0 2px 5px rgba(0,0,0,0.3)"
+                  }}
+                >
+                  {cartCount}
+                </span>
+              )}
+            </button>
+
             {/* Real-Time Notification Bell & Live Alert Center */}
             <NotificationBell onNavigateTab={setActiveTab} />
 

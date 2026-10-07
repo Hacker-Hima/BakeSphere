@@ -117,6 +117,9 @@ export const RazorpayPaymentModal = ({
             orderId: razorpayOrder.id,
             signature
           });
+          if (typeof onClose === "function") {
+            onClose();
+          }
         }, 1200);
       } else {
         setVerifyStatus("failed");
@@ -131,6 +134,8 @@ export const RazorpayPaymentModal = ({
       setLoading(false);
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div

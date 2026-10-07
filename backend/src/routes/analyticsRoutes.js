@@ -205,7 +205,7 @@ router.get("/branch-comparison", (req, res) => {
 });
 
 // Full Executive P&L and Multi-Branch Summary Export
-router.get("/export-summary", (req, res) => {
+router.get(["/export-summary", "/export/pl-report", "/pl-report"], (req, res) => {
   const branchList = getBranchStats();
   const totalSales = branchList.reduce((sum, b) => sum + b.todaySales, 0);
   const totalMonthlySales = branchList.reduce((sum, b) => sum + b.currentMonthSales, 0);

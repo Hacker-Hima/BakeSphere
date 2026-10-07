@@ -28,6 +28,9 @@ export const CartDrawer = ({
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [placedOrderId, setPlacedOrderId] = useState("");
   const [lastInvoice, setLastInvoice] = useState(null);
+  const [isRazorpayOpen, setIsRazorpayOpen] = useState(false);
+  const [pendingInvoice, setPendingInvoice] = useState(null);
+  const [paymentMode, setPaymentMode] = useState("razorpay"); // "razorpay" | "cod"
 
   if (!isOpen) return null;
 
@@ -63,10 +66,6 @@ export const CartDrawer = ({
       setCouponError("Invalid coupon code. Try SWEET15 or BAKE50.");
     }
   };
-
-  const [isRazorpayOpen, setIsRazorpayOpen] = useState(false);
-  const [pendingInvoice, setPendingInvoice] = useState(null);
-  const [paymentMode, setPaymentMode] = useState("razorpay"); // "razorpay" | "cod"
 
   const finalizeOrder = (invoiceData, razorpayDetails = null) => {
     // Trigger celebration confetti
@@ -107,11 +106,22 @@ export const CartDrawer = ({
       invoice: invoiceData
     });
 
+    // Immediately clear cart locally and globally
+    if (typeof onClearCart === "function") {
+      onClearCart();
+    }
+    try {
+      localStorage.setItem("bakesphere_cart", "[]");
+    } catch {}
+    setAppliedCoupon(null);
+    setCouponCode("");
     setPlacedOrderId(invoiceData.orderId);
     setLastInvoice(invoiceData);
-    setOrderPlaced(true);
+    setOrderPlaced(false);
     setIsRazorpayOpen(false);
-    onClearCart();
+    if (typeof onClose === "function") {
+      onClose();
+    }
 
     // Immediately pop open the Tax Invoice Bill Modal!
     openBill(invoiceData);

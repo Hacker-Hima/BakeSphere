@@ -9,13 +9,33 @@ const DEFAULT_ITEMS = [
   { productName: "Artisan Sourdough Boule", openingStock: 25, bakedPrepared: 10, soldConsumed: 14, wasteQty: 0, wasteReason: "", reorderThreshold: 10 }
 ];
 
+const FALLBACK_BRANCHES = [
+  { id: "BR-01", name: "Heritage Main Bakery (T. Nagar)" },
+  { id: "BR-02", name: "Anna Nagar Flagship" },
+  { id: "BR-03", name: "Koyambedu Express Hub" },
+  { id: "BR-04", name: "OMR Cloud Kitchen & Master Production" }
+];
+
+const DEFAULT_TIME_SLOTS = [
+  "08:00 AM – 10:00 AM (Morning Opening)",
+  "10:00 AM – 12:00 PM (Mid-Morning Rush)",
+  "12:00 PM – 02:00 PM (Lunch & Confectionery Peak)",
+  "02:00 PM – 04:00 PM (Midday Replenishment)",
+  "04:00 PM – 06:00 PM (Evening Tea Rush)",
+  "06:00 PM – 08:00 PM (Celebration Cake Rush)",
+  "08:00 PM – 10:00 PM (Store Closing & Reconciliation)"
+];
+
 export const PeriodicStockReportingDesk = () => {
-  const { currentUser, branches, activeBranchId } = useAuth();
+  const auth = useAuth() || {};
+  const currentUser = auth.currentUser;
+  const activeBranchId = auth.activeBranchId;
   const { addNotification } = useNotifications();
 
+  const [branches, setBranches] = useState(() => (auth.branches && auth.branches.length ? auth.branches : FALLBACK_BRANCHES));
   const [reports, setReports] = useState([]);
-  const [timeSlots, setTimeSlots] = useState([]);
-  const [selectedSlot, setSelectedSlot] = useState("");
+  const [timeSlots, setTimeSlots] = useState(DEFAULT_TIME_SLOTS);
+  const [selectedSlot, setSelectedSlot] = useState(DEFAULT_TIME_SLOTS[2]);
   const [selectedBranchId, setSelectedBranchId] = useState(activeBranchId || "BR-01");
   const [items, setItems] = useState(DEFAULT_ITEMS);
   const [chefNotes, setChefNotes] = useState("");
@@ -24,9 +44,25 @@ export const PeriodicStockReportingDesk = () => {
   const [reviewModalReport, setReviewModalReport] = useState(null);
   const [managerReviewNotes, setManagerReviewNotes] = useState("");
 
-  const isChef = currentUser?.role === "chef" || currentUser?.role === "staff" || currentUser?.role === "head_baker";
-  const isManager = currentUser?.role === "manager" || currentUser?.role === "branch_manager";
-  const isAdmin = currentUser?.role === "admin";
+  const userRole = currentUser?.role || "";
+  const isChef = userRole === "chef" || userRole === "staff" || userRole === "head_baker";
+  const isManager = userRole === "manager" || userRole === "branch_manager" || userRole === "bakery_owner";
+  const isAdmin = userRole === "admin" || userRole === "super_admin" || userRole === "bakery_owner";
+
+  useEffect(() => {
+    if (auth.branches && auth.branches.length) {
+      setBranches(auth.branches);
+    } else {
+      fetch("http://localhost:5000/api/branches")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.branches && data.branches.length > 0) {
+            setBranches(data.branches);
+          }
+        })
+        .catch((e) => console.warn("Failed to load branches in PeriodicStockReportingDesk:", e));
+    }
+  }, [auth.branches]);
 
   useEffect(() => {
     fetchStockReports();
@@ -93,7 +129,7 @@ export const PeriodicStockReportingDesk = () => {
     }
 
     setIsSubmitting(true);
-    const branchObj = branches.find((b) => b.id === selectedBranchId) || branches[0];
+    const branchObj = (branches || []).find((b) => b.id === selectedBranchId) || (branches && branches[0]) || { name: "Flagship T. Nagar Hub" };
 
     try {
       const token = sessionStorage.getItem("bakesphere_jwt") || localStorage.getItem("bakesphere_jwt");
@@ -212,7 +248,7 @@ export const PeriodicStockReportingDesk = () => {
               }}
             >
               {isAdmin && <option value="ALL">All Flagship Branches</option>}
-              {branches.map((b) => (
+              {(branches || []).map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.name}
                 </option>
@@ -251,7 +287,7 @@ export const PeriodicStockReportingDesk = () => {
                   fontWeight: 700
                 }}
               >
-                {timeSlots.map((slot) => (
+                {(timeSlots || []).map((slot) => (
                   <option key={slot} value={slot}>
                     {slot}
                   </option>

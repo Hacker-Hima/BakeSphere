@@ -35,7 +35,7 @@ import { BranchFinderModal } from "./components/branches/BranchFinderModal.jsx";
 const AppContent = () => {
   const { currentUser, allowedTabs, hasPermission, role } = useAuth();
   const { playChime } = useThemeSettings();
-  const { activeBill, closeBill } = useNotifications();
+  const { activeBill, closeBill, openBill } = useNotifications();
   const [activeTab, setActiveTab] = useState("login");
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [cityModalOpen, setCityModalOpen] = useState(false);
@@ -211,6 +211,9 @@ const AppContent = () => {
 
   const handleClearCart = () => {
     setCart([]);
+    try {
+      localStorage.setItem("bakesphere_cart", "[]");
+    } catch {}
   };
 
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
